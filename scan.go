@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+
 type fieldSpec struct {
 	name string
 	index []int
@@ -83,6 +84,34 @@ func compileStructSpec(t reflect.Type) *structSpec {
 	}
 
 	return &structSpec{fieldSpecs}
+}
+
+func compileFieldSpec(structf *reflect.StructField) *fieldSpec {
+	tag := structf.Tag.Get("redis")
+	if tag == "-" {
+		return nil
+	}
+
+	name, _ := parseTag(tag)
+	if !isValidTag(name) {
+		name = ""
+	}
+
+	typ := structf.Type
+	for (typ.Name() == "" && typ.Kind() == reflect.Ptr) {
+		typ = typ.Elem()
+	}
+
+	tagged := name != ""
+	if name == "" {
+		name = typ.Name()
+	}
+
+	return &fieldSpec{
+		name: name,
+		tag: tagged,
+		typ: typ,
+	}
 }
 
 var structSpecCache struct {
