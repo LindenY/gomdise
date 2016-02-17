@@ -3,6 +3,7 @@ package gomdies
 
 import (
 	"github.com/garyburd/redigo/redis"
+	"fmt"
 )
 
 type Transaction struct {
@@ -19,6 +20,10 @@ type Action struct {
 
 type ReplyHandler func(interface{}) error
 
+func (action *Action) String() string {
+	return fmt.Sprintf("%s\t%v", action.name, action.args)
+}
+
 func NewTransaction(pool *redis.Pool) *Transaction {
 	t := &Transaction{
 		conn: pool.Get(),
@@ -32,12 +37,20 @@ func (tran *Transaction) setError(err error) {
 	}
 }
 
-func (tran *Transaction) Command(name string, args redis.Args, handler ReplyHandler) {
-	tran.actions = append(tran.actions, &Action{
-		name: name,
-		args: args,
-		handler: handler,
-	})
+func (tran *Transaction) pushAction(action *Action) {
+	if action == nil {
+		return
+	}
+	tran.actions = append(tran.actions, action)
+}
+
+func (tran *Transaction) popAction() *Action {
+	if (len(tran.actions) == 0) {
+		return nil
+	}
+	ret := tran.actions[len(tran.actions) - 1]
+	tran.actions = tran.actions[0:len(tran.actions) - 1]
+	return ret
 }
 
 func (tran *Transaction) sendAction(action *Action) error {
