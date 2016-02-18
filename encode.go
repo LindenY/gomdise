@@ -1,10 +1,11 @@
 package gomdies
 
 import (
-	"reflect"
-	"sync"
+	_"reflect"
+	_"sync"
 )
 
+/*
 type encoderFunc func(script *Script, v reflect.Value)
 
 
@@ -69,4 +70,4 @@ func newStructEncoder(typ reflect.Type) encoderFunc {
 	ss := structSpecForType(typ)
 
 }
-
+*/

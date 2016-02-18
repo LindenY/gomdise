@@ -3,6 +3,7 @@ package gomdies
 import (
 	"reflect"
 	"github.com/garyburd/redigo/redis"
+	"errors"
 )
 
 type parseState struct {
@@ -11,7 +12,7 @@ type parseState struct {
 }
 
 
-func (pstate *parseState) pushAction(action *Action) {
+func (pstate *parseState)pushAction(action *Action) {
 	if action == nil {
 		return
 	}
@@ -30,15 +31,21 @@ func (pstate *parseState)popAction() *Action {
 }
 
 
-func parseSave(pstate *parseState, target *interface{}) {
+func parseSave(pstate *parseState, target interface{}) {
 	typ := reflect.TypeOf(target)
 	switch typ.Kind() {
-	case reflect.Slice || reflect.Array:
+	case reflect.Slice, reflect.Array:
 		parseArraySave(pstate, target)
+	case reflect.Map:
+		parseMapSave(pstate, target)
+	case reflect.Struct:
+		parseStructSave(pstate, target)
+	default:
+		parsePrimitiveSave(pstate, target)
 	}
 }
 
-func parseArraySave(pstate *parseState, target *interface{}) {
+func parseArraySave(pstate *parseState, target interface{}) {
 	tKey := newKey(target)
 	prev := pstate.popAction()
 	curr := &Action{
@@ -49,17 +56,17 @@ func parseArraySave(pstate *parseState, target *interface{}) {
 
 	v := reflect.ValueOf(target)
 	n := v.Len()
-	for i := 1; i < n; i++ {
-		parseSave(pstate, target)
+	for i := 0; i < n; i++ {
+		parseSave(pstate, v.Index(i).Interface())
 	}
 
 	if prev != nil {
-		prev.args.Add(tKey)
+		prev.args = prev.args.Add(tKey)
 	}
 	pstate.pushAction(prev)
 }
 
-func parseMapSave(pstate *parseState, target *interface{}) {
+func parseMapSave(pstate *parseState, target interface{}) {
 	tKey := newKey(target)
 	prev := pstate.popAction()
 	curr := &Action{
@@ -71,20 +78,25 @@ func parseMapSave(pstate *parseState, target *interface{}) {
 	v := reflect.ValueOf(target)
 	mKeys := v.MapKeys()
 	for _, mkey := range mKeys {
-		parseSave(pstate, v.MapIndex(mKey))
+		curr.args = curr.args.Add(mkey)
+		parseSave(pstate, v.MapIndex(mkey).Interface())
 	}
 
 	if prev != nil {
-		prev.args.Add(tKey)
+		prev.args = prev.args.Add(tKey)
 	}
 	pstate.pushAction(prev)
 }
 
-func parseStructSave(pstate *parseState, target *interface{}) {
+func parseStructSave(pstate *parseState, target interface{}) {
 
 }
 
-func parsePrimitiveSave(pstate *parseState, target *interface{}) {
+func parsePrimitiveSave(pstate *parseState, target interface{}) {
+	if len(pstate.actions) == 0 {
+		panic(errors.New("actions is empty"))
+	}
+
 	curr := pstate.actions[len(pstate.actions)-1]
-	curr.args.Add(target)
+	curr.args = curr.args.Add(target)
 }

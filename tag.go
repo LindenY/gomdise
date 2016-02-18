@@ -16,10 +16,10 @@ func parseTag(tag string) (string, tagOptions) {
 
 
 func isValidTag(tag string) bool {
-	if s == "" {
+	if tag == "" {
 		return false
 	}
-	for _, c := range s {
+	for _, c := range tag {
 		switch {
 		case strings.ContainsRune("!#$%&()*+-./:<=>?@[]^_{|}~ ", c):
 		// Backslash and quote chars are reserved, but

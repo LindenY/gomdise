@@ -13,9 +13,9 @@ func newKey(val interface{}) string {
 
 	var key string
 	switch typ.Kind() {
-	case reflect.Array || reflect.Slice:
+	case reflect.Array, reflect.Slice:
 		key = "_arr:"
-	case reflect.Map
+	case reflect.Map:
 		key = "_map:"
 	case reflect.Struct:
 		key = "_srt:"
@@ -24,5 +24,5 @@ func newKey(val interface{}) string {
 	}
 
 	uuid := uuid.NewV4()
-	return key + uuid
+	return key + uuid.String()
 }

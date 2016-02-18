@@ -1,5 +1,6 @@
 package gomdies
 
+/*
 import (
 	"reflect"
 	"sync"
@@ -139,3 +140,4 @@ func structSpecForType(t reflect.Type) structSpec {
 
 	return ss
 }
+*/
