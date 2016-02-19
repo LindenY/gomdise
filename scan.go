@@ -1,6 +1,5 @@
 package gomdies
 
-/*
 import (
 	"reflect"
 	"sync"
@@ -25,9 +24,8 @@ func compileStructSpec(t reflect.Type) *structSpec {
 
 	visited := map[reflect.Type]bool{}
 
-	fieldSpecs := make(map[string]fieldSpec)
-
-	for (len(current) > 0) {
+	fieldSpecs := make(map[string]*fieldSpec)
+	for len(next) > 0 {
 		current, next = next, current[:0]
 
 		for _, fs := range current {
@@ -39,6 +37,7 @@ func compileStructSpec(t reflect.Type) *structSpec {
 			// Scan fs.type for fields to include
 			for i := 0; i < fs.typ.NumField(); i++ {
 				sfs := fs.typ.Field(i);
+
 				if sfs.PkgPath != "" && !sfs.Anonymous { // unexported
 					continue
 				}
@@ -64,9 +63,9 @@ func compileStructSpec(t reflect.Type) *structSpec {
 				if name != "" || !sfs.Anonymous || ft.Kind() != reflect.Struct {
 					tagged := name != ""
 					if name == "" {
-						name = sfs.Name()
+						name = sfs.Name
 					}
-					fieldSpecs[name] = *fieldSpec{
+					fieldSpecs[name] = &fieldSpec{
 						name: name,
 						tag: tagged,
 						index: index,
@@ -87,40 +86,12 @@ func compileStructSpec(t reflect.Type) *structSpec {
 	return &structSpec{fieldSpecs}
 }
 
-func compileFieldSpec(structf *reflect.StructField) *fieldSpec {
-	tag := structf.Tag.Get("redis")
-	if tag == "-" {
-		return nil
-	}
-
-	name, _ := parseTag(tag)
-	if !isValidTag(name) {
-		name = ""
-	}
-
-	typ := structf.Type
-	for (typ.Name() == "" && typ.Kind() == reflect.Ptr) {
-		typ = typ.Elem()
-	}
-
-	tagged := name != ""
-	if name == "" {
-		name = typ.Name()
-	}
-
-	return &fieldSpec{
-		name: name,
-		tag: tagged,
-		typ: typ,
-	}
-}
-
 var structSpecCache struct {
 	sync.RWMutex
 	m map[reflect.Type]*structSpec
 }
 
-func structSpecForType(t reflect.Type) structSpec {
+func structSpecForType(t reflect.Type) *structSpec {
 
 	structSpecCache.RLock()
 	ss := structSpecCache.m[t]
@@ -140,4 +111,3 @@ func structSpecForType(t reflect.Type) structSpec {
 
 	return ss
 }
-*/
