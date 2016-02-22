@@ -2,17 +2,24 @@ package gomdies
 
 import (
 	"testing"
-	_"github.com/garyburd/redigo/redis"
 	"fmt"
-	"reflect"
 )
 
+type tsA struct {
+	m map[string][]int
+	tsB
+}
+
+type tsB struct {
+	m map[string]*tsC
+}
+
+type tsC struct {
+	str string
+	ls []int
+}
+
 func TestParse(t *testing.T) {
-
-	pstate := &parseState{
-		actions:make([]*Action, 0),
-	}
-
 	l0 := make([]int, 3)
 	l0[0] = 3
 	l0[1] = 4
@@ -22,28 +29,36 @@ func TestParse(t *testing.T) {
 	l1[0] = 6
 	l1[1] = 7
 
-	m := make(map[string][]int)
-	m["l0"] = l0
-	m["l1"] = l1
+	tsC0 := &tsC{"tsC0", l0}
+	tsC1 := &tsC{"tsC1", l1}
+	m0 := make(map[string]*tsC)
+	m0["tsC0"] = tsC0
+	m0["tsC1"] = tsC1
 
+	tsB0 := tsB{m0}
 
-	pf := saveParser(reflect.TypeOf(m))
-	pf(pstate, reflect.ValueOf(m))
+	m1 := make(map[string][]int)
+	m1["l0"] = l0
+	m1["l1"] = l1
 
-	fmt.Printf("%v\n", parserCache.m)
-	fmt.Println()
-	fmt.Printf("Num of actions: %d\n", len(pstate.actions))
-	for i, a := range pstate.actions {
-		fmt.Printf("\t[%d]:\t%v \n", i, a)
+	tsA0 := tsA{
+		m: m1,
+		tsB: tsB0,
 	}
+
+
+	actions := parseSave(tsA0)
+
+	fmt.Printf("%v\n", saveParserCache.m)
+	fmt.Println()
+	printActions(actions)
 
 }
 
 
 func printActions(actions  []*Action) {
-
-	fmt.Sprintf("Num of actions: %d", len(actions))
+	fmt.Printf("Num of actions: %d\n", len(actions))
 	for i, a := range actions {
-		fmt.Sprintf("\t[%d]:\t%v", i, a)
+		fmt.Printf("\t[%d]:\t%v\n", i, a)
 	}
 }

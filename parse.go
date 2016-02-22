@@ -5,11 +5,12 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"errors"
 	"sync"
+	"runtime"
 )
 
 type parseState struct {
 	actions []*Action
-	target *interface{}
+	target interface{}
 }
 
 
@@ -27,41 +28,68 @@ func (pstate *parseState)popAction() *Action {
 	return ret
 }
 
+func (pstate *parseState)marshal(v interface{}, prsFunc parseFunc) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(runtime.Error); ok {
+				panic(r)
+			}
+			if s, ok := r.(string); ok {
+				panic(s)
+			}
+			err = r.(error)
+		}
+	}()
+	prsFunc(pstate, reflect.ValueOf(v))
+	return nil
+}
 
-// Save Parse Functions
 type parseFunc func(pstate *parseState, v reflect.Value)
 
-var parserCache struct {
+
+
+// Save Parse Functions
+
+func parseSave(v interface{}) []*Action {
+	pstate := &parseState{
+		actions:make([]*Action, 0),
+		target:v,
+	}
+	pstate.marshal(v, saveParser(reflect.TypeOf(v)))
+	return pstate.actions
+}
+
+var saveParserCache struct {
 	sync.RWMutex
 	m map[reflect.Type]parseFunc
 }
 
 func saveParser(t reflect.Type) parseFunc {
-	parserCache.RLock()
-	f := parserCache.m[t]
-	parserCache.RUnlock()
+	saveParserCache.RLock()
+	f := saveParserCache.m[t]
+	saveParserCache.RUnlock()
 	if f != nil {
 		return f
 	}
 
-	parserCache.Lock()
-	if parserCache.m == nil {
-		parserCache.m = make(map[reflect.Type]parseFunc)
+	saveParserCache.Lock()
+	if saveParserCache.m == nil {
+		saveParserCache.m = make(map[reflect.Type]parseFunc)
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	parserCache.m[t] = func(pstate *parseState, v reflect.Value) {
+	saveParserCache.m[t] = func(pstate *parseState, v reflect.Value) {
 		wg.Wait()
 		f(pstate, v)
 	}
-	parserCache.Unlock()
+	saveParserCache.Unlock()
 
 	f = newSaveParser(t)
 	wg.Done()
-	parserCache.Lock()
-	parserCache.m[t] = f
-	parserCache.Unlock()
+	saveParserCache.Lock()
+	saveParserCache.m[t] = f
+	saveParserCache.Unlock()
 
 	return f
 }
