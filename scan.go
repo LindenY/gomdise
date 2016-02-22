@@ -13,6 +13,14 @@ type fieldSpec struct {
 	typ reflect.Type
 }
 
+func (fldSpec *fieldSpec)valueOf(v reflect.Value) reflect.Value {
+	retVal := v
+	for _, fldIdx := range fldSpec.index {
+		retVal = retVal.Field(fldIdx)
+	}
+	return retVal
+}
+
 type structSpec struct {
 	fields []*fieldSpec
 }

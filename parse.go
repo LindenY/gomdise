@@ -1,34 +1,34 @@
 package gomdies
 
 import (
-	"reflect"
-	"github.com/garyburd/redigo/redis"
 	"errors"
-	"sync"
+	"fmt"
+	"github.com/garyburd/redigo/redis"
+	"reflect"
 	"runtime"
+	"sync"
 )
 
 type parseState struct {
 	actions []*Action
-	target interface{}
+	target  interface{}
 }
 
-
-func (pstate *parseState)pushAction(action *Action) {
+func (pstate *parseState) pushAction(action *Action) {
 	pstate.actions = append(pstate.actions, action)
 }
 
-func (pstate *parseState)popAction() *Action {
+func (pstate *parseState) popAction() *Action {
 	if pstate.actions == nil || len(pstate.actions) == 0 {
 		return nil
 	}
 
 	ret := pstate.actions[len(pstate.actions)-1]
-	pstate.actions = pstate.actions[0:len(pstate.actions)-1]
+	pstate.actions = pstate.actions[0 : len(pstate.actions)-1]
 	return ret
 }
 
-func (pstate *parseState)marshal(v interface{}, prsFunc parseFunc) (err error) {
+func (pstate *parseState) marshal(v interface{}, prsFunc parseFunc) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -46,17 +46,18 @@ func (pstate *parseState)marshal(v interface{}, prsFunc parseFunc) (err error) {
 
 type parseFunc func(pstate *parseState, v reflect.Value)
 
-
-
 // Save Parse Functions
 
-func parseSave(v interface{}) []*Action {
+func parseSave(v interface{}) (actions []*Action, err error) {
 	pstate := &parseState{
-		actions:make([]*Action, 0),
-		target:v,
+		actions: make([]*Action, 0),
+		target:  v,
 	}
-	pstate.marshal(v, saveParser(reflect.TypeOf(v)))
-	return pstate.actions
+	err = pstate.marshal(v, saveParser(reflect.TypeOf(v)))
+	if err != nil {
+		return nil, err
+	}
+	return pstate.actions, nil
 }
 
 var saveParserCache struct {
@@ -65,6 +66,9 @@ var saveParserCache struct {
 }
 
 func saveParser(t reflect.Type) parseFunc {
+
+	fmt.Printf("SaveParser: %v \n", t)
+
 	saveParserCache.RLock()
 	f := saveParserCache.m[t]
 	saveParserCache.RUnlock()
@@ -114,7 +118,6 @@ func newSaveParser(t reflect.Type) parseFunc {
 	}
 }
 
-
 func primitiveSaveParser(pstate *parseState, v reflect.Value) {
 	if len(pstate.actions) == 0 {
 		panic(errors.New("Primitive type is not supported"))
@@ -123,7 +126,6 @@ func primitiveSaveParser(pstate *parseState, v reflect.Value) {
 	curr := pstate.actions[len(pstate.actions)-1]
 	curr.args = curr.args.Add(v.Interface())
 }
-
 
 type arraySaveParser struct {
 	elemFunc parseFunc
@@ -134,13 +136,13 @@ func (asp *arraySaveParser) parse(pstate *parseState, v reflect.Value) {
 	prev := pstate.popAction()
 	curr := &Action{
 		name: "RPUSH",
-		args:redis.Args{arrKey},
+		args: redis.Args{arrKey},
 	}
 	pstate.pushAction(curr)
 
 	n := v.Len()
-	for i := 0; i<n; i++ {
-		asp.elemFunc(pstate, v)
+	for i := 0; i < n; i++ {
+		asp.elemFunc(pstate, v.Index(i))
 	}
 
 	if prev != nil {
@@ -154,7 +156,6 @@ func newArraySaveParser(t reflect.Type) parseFunc {
 	return asp.parse
 }
 
-
 type mapSaveParser struct {
 	elemFunc parseFunc
 }
@@ -163,15 +164,15 @@ func (msp *mapSaveParser) parse(pstate *parseState, v reflect.Value) {
 	mapKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		name:"HSET",
-		args:redis.Args{mapKey},
+		name: "HSET",
+		args: redis.Args{mapKey},
 	}
 	pstate.pushAction(curr)
 
 	skeys := v.MapKeys()
 	for _, skey := range skeys {
 		curr.args = curr.args.Add(skey)
-		msp.elemFunc(pstate, v)
+		msp.elemFunc(pstate, v.MapIndex(skey))
 	}
 
 	if prev != nil {
@@ -189,9 +190,8 @@ func newMapSaveParser(t reflect.Type) parseFunc {
 	return msp.parse
 }
 
-
 type structSaveParser struct {
-	spec *structSpec
+	spec      *structSpec
 	elemFuncs []parseFunc
 }
 
@@ -199,14 +199,16 @@ func (ssp *structSaveParser) parse(pstate *parseState, v reflect.Value) {
 	srtKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		name:"HSET",
-		args:redis.Args{srtKey},
+		name: "HSET",
+		args: redis.Args{srtKey},
 	}
 	pstate.pushAction(curr)
 
+	fmt.Printf("ssp: %d\n", len(ssp.spec.fields))
 	for i, fldSpec := range ssp.spec.fields {
+		fmt.Printf("ssp.parse(%v) \n", fldSpec.typ)
 		curr.args = curr.args.Add(fldSpec.name)
-		ssp.elemFuncs[i](pstate, v)
+		ssp.elemFuncs[i](pstate, fldSpec.valueOf(v))
 	}
 
 	if prev != nil {
@@ -218,8 +220,8 @@ func (ssp *structSaveParser) parse(pstate *parseState, v reflect.Value) {
 func newStructSaveParser(t reflect.Type) parseFunc {
 	srtSpec := structSpecForType(t)
 	ssp := &structSaveParser{
-		spec: srtSpec,
-		elemFuncs:make([]parseFunc, len(srtSpec.fields)),
+		spec:      srtSpec,
+		elemFuncs: make([]parseFunc, len(srtSpec.fields)),
 	}
 
 	for i, fldSpec := range ssp.spec.fields {
@@ -227,7 +229,6 @@ func newStructSaveParser(t reflect.Type) parseFunc {
 	}
 	return ssp.parse
 }
-
 
 type pointerSaveParser struct {
 	elemFunc parseFunc
@@ -246,7 +247,6 @@ func newPointerSaveParser(t reflect.Type) parseFunc {
 	psp := &pointerSaveParser{saveParser(t.Elem())}
 	return psp.parse
 }
-
 
 func unsupportedTypeParser(pstate *parseState, v reflect.Value) {
 	panic(&UnsupportedTypeError{v.Type()})

@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+
 type tsA struct {
 	tsB
 	IntVal int

@@ -5,18 +5,18 @@ import (
 	"fmt"
 )
 
-type tsA struct {
-	m map[string][]int
-	tsB
+type ptsA struct {
+	ptsB
+	M map[string][]int
 }
 
-type tsB struct {
-	m map[string]*tsC
+type ptsB struct {
+	M map[string]*ptsC
 }
 
-type tsC struct {
-	str string
-	ls []int
+type ptsC struct {
+	Str string
+	Ls []int
 }
 
 func TestParse(t *testing.T) {
@@ -29,25 +29,26 @@ func TestParse(t *testing.T) {
 	l1[0] = 6
 	l1[1] = 7
 
-	tsC0 := &tsC{"tsC0", l0}
-	tsC1 := &tsC{"tsC1", l1}
-	m0 := make(map[string]*tsC)
+	tsC0 := &ptsC{"tsC0", l0}
+	tsC1 := &ptsC{"tsC1", l1}
+	m0 := make(map[string]*ptsC)
 	m0["tsC0"] = tsC0
 	m0["tsC1"] = tsC1
-
-	tsB0 := tsB{m0}
 
 	m1 := make(map[string][]int)
 	m1["l0"] = l0
 	m1["l1"] = l1
 
-	tsA0 := tsA{
-		m: m1,
-		tsB: tsB0,
+	tsA0 := ptsA{
+		M: m1,
+		ptsB: ptsB{m0},
 	}
 
 
-	actions := parseSave(tsA0)
+	actions, err := parseSave(tsA0)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Printf("%v\n", saveParserCache.m)
 	fmt.Println()
