@@ -4,6 +4,7 @@ import (
 	"testing"
 	_"github.com/garyburd/redigo/redis"
 	"fmt"
+	"reflect"
 )
 
 func TestParse(t *testing.T) {
@@ -26,8 +27,11 @@ func TestParse(t *testing.T) {
 	m["l1"] = l1
 
 
-	parseSave(pstate, m)
+	pf := saveParser(reflect.TypeOf(m))
+	pf(pstate, reflect.ValueOf(m))
 
+	fmt.Printf("%v\n", parserCache.m)
+	fmt.Println()
 	fmt.Printf("Num of actions: %d\n", len(pstate.actions))
 	for i, a := range pstate.actions {
 		fmt.Printf("\t[%d]:\t%v \n", i, a)
