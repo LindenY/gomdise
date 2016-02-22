@@ -43,8 +43,8 @@ func TestScan(t *testing.T) {
 
 	sSpec := structSpecForType(reflect.TypeOf(tsa0))
 
-	fmt.Printf("Struct:%v\t%d fields \n", reflect.TypeOf(tsa0), len(sSpec.fmap))
-	for fName, fSpec := range sSpec.fmap {
-		fmt.Printf("%s:\t%v\n", fName, fSpec)
+	fmt.Printf("Struct:%v\t%d fields \n", reflect.TypeOf(tsa0), len(sSpec.fields))
+	for i, fSpec := range sSpec.fields {
+		fmt.Printf("[%d]\t%s:\t%v\n", i, fSpec.name, fSpec)
 	}
 }

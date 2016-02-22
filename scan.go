@@ -14,7 +14,7 @@ type fieldSpec struct {
 }
 
 type structSpec struct {
-	fmap map[string]*fieldSpec
+	fields []*fieldSpec
 }
 
 func compileStructSpec(t reflect.Type) *structSpec {
@@ -24,7 +24,7 @@ func compileStructSpec(t reflect.Type) *structSpec {
 
 	visited := map[reflect.Type]bool{}
 
-	fieldSpecs := make(map[string]*fieldSpec)
+	fieldSpecs := make([]*fieldSpec, 0)
 	for len(next) > 0 {
 		current, next = next, current[:0]
 
@@ -65,12 +65,12 @@ func compileStructSpec(t reflect.Type) *structSpec {
 					if name == "" {
 						name = sfs.Name
 					}
-					fieldSpecs[name] = &fieldSpec{
+					fieldSpecs = append(fieldSpecs, &fieldSpec{
 						name: name,
 						tag: tagged,
 						index: index,
 						typ: ft,
-					}
+					})
 					continue
 				}
 
