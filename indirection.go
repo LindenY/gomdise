@@ -5,9 +5,14 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func newKey(val interface{}) string {
+var (
+	modelType = reflect.TypeOf(new(Model)).Elem()
+)
+
+func newKey(val reflect.Value) string {
 	typ := reflect.TypeOf(val)
-	if model, ok := val.(Model); ok {
+	if val.Type().Implements(modelType) {
+		model := val.Interface().(Model)
 		return model.GetModelId()
 	}
 
@@ -19,6 +24,8 @@ func newKey(val interface{}) string {
 		key = "_map:"
 	case reflect.Struct:
 		key = "_srt:"
+	case reflect.Ptr:
+		key = newKey(val.Elem())
 	default:
 		key = "_udf"
 	}
