@@ -255,3 +255,16 @@ func unsupportedTypeParser(pstate *parseState, v reflect.Value) {
 type UnsupportedTypeError struct {
 	Type reflect.Type
 }
+
+
+
+func parseFind(v interface{}, key string) {
+
+
+
+}
+
+
+type arrayFindParser struct {
+
+}
