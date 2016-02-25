@@ -258,13 +258,27 @@ type UnsupportedTypeError struct {
 
 
 
+type findFunc func(pstate *parseState, v reflect.Value, key string)
+
 func parseFind(v interface{}, key string) {
 
 
 
 }
 
+func findParser(t reflect.Type) findFunc {
+
+}
 
 type arrayFindParser struct {
+	elemFunc findFunc
+}
 
+func (afp *arrayFindParser)parse(pstate *parseState, v reflect.Value, key string) {
+
+}
+
+func newArrayFindParser(t reflect.Type) {
+	afp := &arrayFindParser{findParser(t.Elem())}
+	return afp.parse
 }
