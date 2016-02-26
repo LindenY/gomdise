@@ -272,10 +272,15 @@ func findParser(t reflect.Type) findFunc {
 
 type arrayFindParser struct {
 	elemFunc findFunc
+	handler  ReplyHandler
 }
 
 func (afp *arrayFindParser)parse(pstate *parseState, v reflect.Value, key string) {
-
+	action := &Action{
+		name:"LRANGE",
+		args:redis.Args{key, 0, -1},
+	}
+	pstate.pushAction(action)
 }
 
 func newArrayFindParser(t reflect.Type) {
