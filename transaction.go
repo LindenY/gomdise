@@ -18,7 +18,7 @@ type Action struct {
 	Handler ReplyHandler
 }
 
-type ReplyHandler func(trans *Transaction, reply interface{}) error
+type ReplyHandler func(tran *Transaction, reply interface{}) error
 
 func (action *Action) handle(trans *Transaction, reply interface{}) error {
 	if action.Handler != nil {
@@ -36,6 +36,22 @@ func NewTransaction(pool *redis.Pool) *Transaction {
 		conn: pool.Get(),
 	}
 	return t
+}
+
+func (tran *Transaction) pushAction(action *Action) {
+	if action == nil {
+		return
+	}
+	tran.Actions = append(tran.Actions, action)
+}
+
+func (tran *Transaction) popAction() *Action {
+	if (len(tran.Actions) == 0) {
+		return nil
+	}
+	ret := tran.Actions[len(tran.Actions) - 1]
+	tran.Actions = tran.Actions[0:len(tran.Actions) - 1]
+	return ret
 }
 
 func (tran *Transaction) setError(err error) {
