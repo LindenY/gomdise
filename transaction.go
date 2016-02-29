@@ -78,7 +78,7 @@ func (tran *Transaction) exec() error {
 		if err != nil {
 			return err
 		}
-		return tran.Actions[0].handle(reply)
+		return tran.Actions[0].handle(tran, reply)
 	}
 
 	if err := tran.conn.Send("MULTI"); err != nil {
@@ -94,7 +94,7 @@ func (tran *Transaction) exec() error {
 		return err
 	}
 	for i, reply := range replies {
-		if err := tran.Actions[tran.offset+i].handle(reply); err != nil {
+		if err := tran.Actions[tran.offset+i].handle(tran, reply); err != nil {
 			break
 		}
 	}
