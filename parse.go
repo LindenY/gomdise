@@ -124,7 +124,7 @@ func primitiveSaveParser(pstate *parseState, v reflect.Value) {
 	}
 
 	curr := pstate.actions[len(pstate.actions)-1]
-	curr.args = curr.args.Add(v.Interface())
+	curr.Args = curr.Args.Add(v.Interface())
 }
 
 type arraySaveParser struct {
@@ -135,8 +135,8 @@ func (asp *arraySaveParser) parse(pstate *parseState, v reflect.Value) {
 	arrKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		name: "RPUSH",
-		args: redis.Args{arrKey},
+		Name: "RPUSH",
+		Args: redis.Args{arrKey},
 	}
 	pstate.pushAction(curr)
 
@@ -146,7 +146,7 @@ func (asp *arraySaveParser) parse(pstate *parseState, v reflect.Value) {
 	}
 
 	if prev != nil {
-		prev.args = prev.args.Add(arrKey)
+		prev.Args = prev.Args.Add(arrKey)
 		pstate.pushAction(prev)
 	}
 }
@@ -164,19 +164,19 @@ func (msp *mapSaveParser) parse(pstate *parseState, v reflect.Value) {
 	mapKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		name: "HSET",
-		args: redis.Args{mapKey},
+		Name: "HSET",
+		Args: redis.Args{mapKey},
 	}
 	pstate.pushAction(curr)
 
 	skeys := v.MapKeys()
 	for _, skey := range skeys {
-		curr.args = curr.args.Add(skey)
+		curr.Args = curr.Args.Add(skey)
 		msp.elemFunc(pstate, v.MapIndex(skey))
 	}
 
 	if prev != nil {
-		prev.args = prev.args.Add(mapKey)
+		prev.Args = prev.Args.Add(mapKey)
 		pstate.pushAction(prev)
 	}
 }
@@ -199,20 +199,20 @@ func (ssp *structSaveParser) parse(pstate *parseState, v reflect.Value) {
 	srtKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		name: "HSET",
-		args: redis.Args{srtKey},
+		Name: "HSET",
+		Args: redis.Args{srtKey},
 	}
 	pstate.pushAction(curr)
 
 	fmt.Printf("ssp: %d\n", len(ssp.spec.fields))
 	for i, fldSpec := range ssp.spec.fields {
 		fmt.Printf("ssp.parse(%v) \n", fldSpec.typ)
-		curr.args = curr.args.Add(fldSpec.name)
+		curr.Args = curr.Args.Add(fldSpec.name)
 		ssp.elemFuncs[i](pstate, fldSpec.valueOf(v))
 	}
 
 	if prev != nil {
-		prev.args = prev.args.Add(srtKey)
+		prev.Args = prev.Args.Add(srtKey)
 		pstate.pushAction(prev)
 	}
 }
@@ -237,7 +237,7 @@ type pointerSaveParser struct {
 func (psp *pointerSaveParser) parse(pstate *parseState, v reflect.Value) {
 	if v.IsNil() {
 		curr := pstate.actions[len(pstate.actions)-1]
-		curr.args = curr.args.Add("NULL")
+		curr.Args = curr.Args.Add("NULL")
 		return
 	}
 	psp.elemFunc(pstate, v.Elem())
@@ -267,7 +267,7 @@ func parseFind(v interface{}, key string) {
 }
 
 func findParser(t reflect.Type) findFunc {
-
+	return nil
 }
 
 type arrayFindParser struct {
@@ -277,13 +277,13 @@ type arrayFindParser struct {
 
 func (afp *arrayFindParser)parse(pstate *parseState, v reflect.Value, key string) {
 	action := &Action{
-		name:"LRANGE",
-		args:redis.Args{key, 0, -1},
+		Name:"LRANGE",
+		Args:redis.Args{key, 0, -1},
 	}
 	pstate.pushAction(action)
 }
 
-func newArrayFindParser(t reflect.Type) {
-	afp := &arrayFindParser{findParser(t.Elem())}
+func newArrayFindParser(t reflect.Type) findFunc {
+	afp := &arrayFindParser{findParser(t.Elem()), nil}
 	return afp.parse
 }
