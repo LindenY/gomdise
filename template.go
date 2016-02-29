@@ -14,7 +14,6 @@ type ActionTemplate interface {
 
 type ArgsEngraver func(tran *Transaction, args interface{}) error
 
-
 var findTemplateCache struct {
 	sync.RWMutex
 	m map[reflect.Type]ActionTemplate
@@ -47,16 +46,16 @@ func findTemplateForType(t reflect.Type) ActionTemplate {
 }
 
 type proxyTemplate struct {
-	wg sync.WaitGroup
+	wg   sync.WaitGroup
 	dest ActionTemplate
 }
 
-func (pt *proxyTemplate)handle(tran *Transaction, reply interface{}) error {
+func (pt *proxyTemplate) handle(tran *Transaction, reply interface{}) error {
 	pt.wg.Wait()
 	return pt.dest.handle(tran, reply)
 }
 
-func (pt *proxyTemplate)engrave(tran *Transaction, args interface{}) error {
+func (pt *proxyTemplate) engrave(tran *Transaction, args interface{}) error {
 	pt.wg.Wait()
 	return pt.dest.engrave(tran, args)
 }
@@ -232,7 +231,7 @@ func (pft *pointerFindTemplate) handle(tran *Transaction, reply interface{}) err
 }
 
 func (pft *pointerFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	return  pft.elemTpl.engrave(tran, args)
+	return pft.elemTpl.engrave(tran, args)
 }
 
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {
@@ -252,6 +251,7 @@ func (vft *voidFindTemplate) handle(tran *Transaction, reply interface{}) error 
 }
 
 var vft *voidFindTemplate
+
 func newVoidFindTemplate(t reflect.Type) *voidFindTemplate {
 	if vft == nil {
 		vft = &voidFindTemplate{}
