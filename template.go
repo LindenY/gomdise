@@ -17,10 +17,10 @@ type ArgsEngraver func(tran *Transaction, args interface{}) error
 
 var findTemplateCache struct {
 	sync.RWMutex
-	m map[reflect.Type]ArgsEngraver
+	m map[reflect.Type]ActionTemplate
 }
 
-func findTemplateForType(t reflect.Type) ArgsEngraver {
+func findTemplateForType(t reflect.Type) ActionTemplate {
 	findTemplateCache.RLock()
 	tpl := findTemplateCache.m[t]
 	findTemplateCache.RUnlock()
@@ -30,16 +30,12 @@ func findTemplateForType(t reflect.Type) ArgsEngraver {
 
 	findTemplateCache.Lock()
 	if findTemplateCache.m == nil {
-		findTemplateCache.m = make(map[reflect.Type]ArgsEngraver)
+		findTemplateCache.m = make(map[reflect.Type]ActionTemplate)
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	findTemplateCache.m[t] = func(tran *Transaction, reply interface{}) error {
-		wg.Wait()
-		tpl(tran, reply)
-		return nil
-	}
+	findTemplateCache.m[t] = &proxyTemplate{wg, tpl}
 	findTemplateCache.Unlock()
 
 	tpl = newFindTemplateForType(t)
@@ -50,12 +46,27 @@ func findTemplateForType(t reflect.Type) ArgsEngraver {
 	return tpl
 }
 
-func newFindTemplateForType(t reflect.Type) ArgsEngraver {
+type proxyTemplate struct {
+	wg sync.WaitGroup
+	dest ActionTemplate
+}
+
+func (pt *proxyTemplate)handle(tran *Transaction, reply interface{}) error {
+	pt.wg.Wait()
+	return pt.dest.handle(tran, reply)
+}
+
+func (pt *proxyTemplate)engrave(tran *Transaction, args interface{}) error {
+	pt.wg.Wait()
+	return pt.dest.engrave(tran, args)
+}
+
+func newFindTemplateForType(t reflect.Type) ActionTemplate {
 	switch t.Kind() {
 	case reflect.Bool, reflect.String, reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return voidFindArgsEngraver
+		return newVoidFindTemplate(t)
 	case reflect.Array, reflect.Slice:
 		return newArrayFindTemplate(t)
 	case reflect.Map:
@@ -63,7 +74,7 @@ func newFindTemplateForType(t reflect.Type) ArgsEngraver {
 	case reflect.Struct:
 		return newStructFindTemplate(t)
 	case reflect.Ptr:
-		return newPointerSaveParser(t)
+		return newPointerFindTemplate(t)
 	default:
 		return nil
 	}
@@ -104,11 +115,11 @@ func (aft *arrayFindTemplate) engrave(tran *Transaction, args interface{}) error
 	return nil
 }
 
-func newArrayFindTemplate(t reflect.Type) ArgsEngraver {
-	aft := arrayFindTemplate{
-		elemEgr: findTemplateForType(t.Elem()),
+func newArrayFindTemplate(t reflect.Type) *arrayFindTemplate {
+	aft := &arrayFindTemplate{
+		elemEgr: findTemplateForType(t.Elem()).engrave,
 	}
-	return aft.engrave
+	return aft
 }
 
 type mapFindTemplate struct {
@@ -151,11 +162,11 @@ func (mft *mapFindTemplate) engrave(tran *Transaction, args interface{}) error {
 	return nil
 }
 
-func newMapFindTemplate(t reflect.Type) ArgsEngraver {
-	mft := mapFindTemplate{
-		elemEgr: findTemplateForType(t.Elem()),
+func newMapFindTemplate(t reflect.Type) *mapFindTemplate {
+	mft := &mapFindTemplate{
+		elemEgr: findTemplateForType(t.Elem()).engrave,
 	}
-	return mft.engrave
+	return mft
 }
 
 type structFindTemplate struct {
@@ -199,7 +210,7 @@ func (sft *structFindTemplate) engrave(tran *Transaction, args interface{}) erro
 	return nil
 }
 
-func newStructFindTemplate(t reflect.Type) ArgsEngraver {
+func newStructFindTemplate(t reflect.Type) *structFindTemplate {
 	srtSpec := structSpecForType(t)
 	sft := &structFindTemplate{
 		spec:     srtSpec,
@@ -207,30 +218,45 @@ func newStructFindTemplate(t reflect.Type) ArgsEngraver {
 	}
 
 	for i, fldSpec := range sft.spec.fields {
-		sft.elemEgrs[i] = findTemplateForType(fldSpec.typ)
+		sft.elemEgrs[i] = findTemplateForType(fldSpec.typ).engrave
 	}
-	return sft.engrave
+	return sft
 }
 
 type pointerFindTemplate struct {
-	elemEgr ArgsEngraver
+	elemTpl ActionTemplate
 }
 
 func (pft *pointerFindTemplate) handle(tran *Transaction, reply interface{}) error {
-	return nil
+	return pft.elemTpl.handle(tran, reply)
 }
 
 func (pft *pointerFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	return  nil
+	return  pft.elemTpl.engrave(tran, args)
 }
 
-func newPointerFindTemplate(t reflect.Type) ArgsEngraver {
+func newPointerFindTemplate(t reflect.Type) ActionTemplate {
 	pft := &pointerFindTemplate{findTemplateForType(t.Elem())}
-	return pft.engrave
+	return pft
 }
 
-func voidFindArgsEngraver(tran *Transaction, args interface{}) error {
+type voidFindTemplate struct {
+}
+
+func (vft *voidFindTemplate) engrave(tran *Transaction, args interface{}) error {
 	return nil
+}
+
+func (vft *voidFindTemplate) handle(tran *Transaction, reply interface{}) error {
+	return nil
+}
+
+var vft *voidFindTemplate
+func newVoidFindTemplate(t reflect.Type) *voidFindTemplate {
+	if vft == nil {
+		vft = &voidFindTemplate{}
+	}
+	return vft
 }
 
 type UnsupportArgsError struct {
@@ -238,6 +264,6 @@ type UnsupportArgsError struct {
 	Args interface{}
 }
 
-func (uaerr *UnsupportArgsError) Error() string {
+func (uaerr UnsupportArgsError) Error() string {
 	return fmt.Sprint("[%v]\t%s", uaerr.Args, uaerr.Msg)
 }
