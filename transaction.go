@@ -12,37 +12,23 @@ type Transaction struct {
 	Err     error
 }
 
-type ActionTemplate struct {
-	Name     string
-	Handler  ReplyHandler
-	Engraver ArgsEngraver
-}
-
 type Action struct {
-	ActionTemplate
-	Args redis.Args
+	Name    string
+	Args    redis.Args
+	Handler ReplyHandler
 }
 
 type ReplyHandler func(trans *Transaction, reply interface{}) error
 
-type ArgsEngraver func(trans *Transaction, args interface{}) error
-
-func (atpl *ActionTemplate) handle(tran *Transaction, reply interface{}) error {
-	if atpl.Handler != nil {
-		return atpl.Handler(tran, reply)
-	}
-	return nil
-}
-
-func (atpl *ActionTemplate) engrave(tran *Transaction, args interface{}) error {
-	if atpl.Handler != nil {
-		return atpl.Engraver(tran, args)
+func (action *Action) handle(trans *Transaction, reply interface{}) error {
+	if action.Handler != nil {
+		return action.Handler(trans, reply)
 	}
 	return nil
 }
 
 func (action *Action) String() string {
-	return fmt.Sprintf("%s\t%v", action.ActionTemplate.Name, action.Args)
+	return fmt.Sprintf("%s\t%v", action.Name, action.Args)
 }
 
 func NewTransaction(pool *redis.Pool) *Transaction {
@@ -59,11 +45,11 @@ func (tran *Transaction) setError(err error) {
 }
 
 func (tran *Transaction) sendAction(action *Action) error {
-	return tran.conn.Send(action.ActionTemplate.Name, action.Args)
+	return tran.conn.Send(action.Name, action.Args)
 }
 
 func (tran *Transaction) doAction(action *Action) (interface{}, error) {
-	return tran.conn.Do(action.ActionTemplate.Name, action.Args)
+	return tran.conn.Do(action.Name, action.Args)
 }
 
 func (tran *Transaction) numUnexecActions() int {
