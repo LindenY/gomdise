@@ -9,6 +9,7 @@ type Transaction struct {
 	conn    redis.Conn
 	offset  int
 	Actions []*Action
+	Replies []interface{}
 	Err     error
 }
 
@@ -34,14 +35,13 @@ func (action *Action) String() string {
 func NewTransaction(pool *redis.Pool) *Transaction {
 	t := &Transaction{
 		conn: pool.Get(),
+		Actions:make([]*Action, 0),
+		Replies:make([]interface{}, 0),
 	}
 	return t
 }
 
 func (tran *Transaction) pushAction(action *Action) {
-	if action == nil {
-		return
-	}
 	tran.Actions = append(tran.Actions, action)
 }
 
@@ -78,6 +78,7 @@ func (tran *Transaction) exec() error {
 		if err != nil {
 			return err
 		}
+		tran.Replies = append(tran.Replies, reply)
 		return tran.Actions[0].handle(tran, reply)
 	}
 
@@ -94,6 +95,7 @@ func (tran *Transaction) exec() error {
 		return err
 	}
 	for i, reply := range replies {
+		tran.Replies = append(tran.Replies, reply)
 		if err := tran.Actions[tran.offset+i].handle(tran, reply); err != nil {
 			break
 		}
