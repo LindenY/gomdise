@@ -3,49 +3,79 @@ package gomdies
 import (
 	"testing"
 	"reflect"
-	"fmt"
 )
 
 
 type tsA struct {
-	tsB
 	IntVal int
 	StrVal string
-	SrtVal tsB
-	PtrVal *tsB
-	MapVal map[string]string
+	BytVal byte
 }
 
 type tsB struct {
-	BytVal byte
-	LstVal []int
+	LIntVal []int
+	LStrVal []string
+	LSrtVal []tsA
+}
+
+type tsC struct {
+	MIntStr map[int]string
+	MStrSrt map[string]tsA
+}
+
+type tsD struct {
+	tsA
+	tsB
+	tsC
+}
+
+type tsE struct{
+	SrtA tsA
+	SrtB tsB
+	SrtC tsC
+}
+
+type tsF struct {
+	tsD
+	tsE
+}
+
+type tsG struct {
+	SrtD tsD
+	SrtE tsE
 }
 
 
-func TestScan(t *testing.T) {
-
-	tsb0 := tsB{
-		BytVal:0x00,
-		LstVal:make([]int, 3),
+func TestBaseStruct(t *testing.T) {
+	specA := structSpecForType(reflect.TypeOf(tsA{}))
+	if len(specA.fields) != 3 {
+		t.Fail()
 	}
-
-	tsb1 := tsB{
-		BytVal:0x01,
-		LstVal:make([]int, 2),
+	if specA.fields[0].typ != reflect.TypeOf(int(0)) {
+		t.Fail()
 	}
-
-	tsa0 := tsA{
-		IntVal: 0,
-		StrVal: "tsa0",
-		SrtVal:tsb0,
-		PtrVal:&tsb1,
-		MapVal:make(map[string]string),
+	if specA.fields[1].typ != reflect.TypeOf(string("")) {
+		t.Fail()
 	}
-
-	sSpec := structSpecForType(reflect.TypeOf(tsa0))
-
-	fmt.Printf("Struct:%v\t%d fields \n", reflect.TypeOf(tsa0), len(sSpec.fields))
-	for i, fSpec := range sSpec.fields {
-		fmt.Printf("[%d]\t%s:\t%v\n", i, fSpec.name, fSpec)
+	if specA.fields[2].typ != reflect.TypeOf(byte(0)) {
+		t.Fail()
 	}
 }
+
+func TestEmbeddedStruct(t *testing.T) {
+
+}
+
+func TestNestedStruct(t *testing.T) {
+
+}
+
+func TestMultipleEmbeddedStruct(t *testing.T) {
+
+}
+
+func TestMultipleNestedStruct(t *testing.T) {
+
+}
+
+
