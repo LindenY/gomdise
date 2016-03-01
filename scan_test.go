@@ -13,38 +13,63 @@ type tsA struct {
 }
 
 type tsB struct {
-	LIntVal []int
-	LStrVal []string
-	LSrtVal []tsA
+	MStrSrt map[string]tsA
+	LSrtVal	[]tsA
 }
 
 type tsC struct {
-	MIntStr map[int]string
-	MStrSrt map[string]tsA
+	MStrStrSrt map[string]map[string]*tsA
+	LLSrtVal [][]*tsA
 }
 
 type tsD struct {
-	tsA
 	tsB
 	tsC
 }
 
-type tsE struct{
-	SrtA tsA
-	SrtB tsB
-	SrtC tsC
+type tsE struct {
+	TsB tsB
+	TsC tsC
 }
 
-type tsF struct {
-	tsD
-	tsE
+func MakeTsA() *tsA {
+	return &tsA{
+		10,
+		"tsA",
+		0x55,
+	}
 }
 
-type tsG struct {
-	SrtD tsD
-	SrtE tsE
+func MakeTsB() *tsB {
+	tsB := &tsB{
+		make(map[string]tsA),
+		make([]tsA, 2, 2),
+	}
+	tsB.MStrSrt["TsA0"] = *MakeTsA()
+	tsB.MStrSrt["TsA1"] = *MakeTsA()
+	tsB.LSrtVal[0] = *MakeTsA()
+	tsB.LSrtVal[1] = *MakeTsA()
+	return tsB
 }
 
+func MakeTsC() *tsC {
+	tsC := &tsC{
+		make(map[string]map[string]*tsA),
+		make([][]*tsA, 2),
+	}
+	tsC.MStrStrSrt["map0"] = make(map[string]*tsA)
+	tsC.MStrStrSrt["map0"]["tsA"] = MakeTsA()
+	tsC.MStrStrSrt["map1"] = make(map[string]*tsA)
+	tsC.MStrStrSrt["map1"]["tsA"] = MakeTsA()
+
+	tsC.LLSrtVal[0] = make([]*tsA, 2)
+	tsC.LLSrtVal[0][0] = MakeTsA()
+	tsC.LLSrtVal[0][1] = MakeTsA()
+	tsC.LLSrtVal[1] = make([]*tsA, 2)
+	tsC.LLSrtVal[1][0] = MakeTsA()
+	tsC.LLSrtVal[1][1] = MakeTsA()
+	return tsC
+}
 
 func TestBaseStruct(t *testing.T) {
 	specA := structSpecForType(reflect.TypeOf(tsA{}))

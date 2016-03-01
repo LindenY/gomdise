@@ -2,7 +2,6 @@ package gomdies
 
 import (
 	"errors"
-	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"reflect"
 	"runtime"
@@ -66,9 +65,6 @@ var saveParserCache struct {
 }
 
 func saveParser(t reflect.Type) parseFunc {
-
-	fmt.Printf("SaveParser: %v \n", t)
-
 	saveParserCache.RLock()
 	f := saveParserCache.m[t]
 	saveParserCache.RUnlock()
@@ -164,7 +160,7 @@ func (msp *mapSaveParser) parse(pstate *parseState, v reflect.Value) {
 	mapKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		Name: "HSET",
+		Name: "HMSET",
 		Args: redis.Args{mapKey},
 	}
 	pstate.pushAction(curr)
@@ -199,14 +195,12 @@ func (ssp *structSaveParser) parse(pstate *parseState, v reflect.Value) {
 	srtKey := newKey(v)
 	prev := pstate.popAction()
 	curr := &Action{
-		Name: "HSET",
+		Name: "HMSET",
 		Args: redis.Args{srtKey},
 	}
 	pstate.pushAction(curr)
 
-	fmt.Printf("ssp: %d\n", len(ssp.spec.fields))
 	for i, fldSpec := range ssp.spec.fields {
-		fmt.Printf("ssp.parse(%v) \n", fldSpec.typ)
 		curr.Args = curr.Args.Add(fldSpec.name)
 		ssp.elemFuncs[i](pstate, fldSpec.valueOf(v))
 	}

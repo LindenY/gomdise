@@ -61,15 +61,15 @@ func (tran *Transaction) setError(err error) {
 }
 
 func (tran *Transaction) sendAction(action *Action) error {
-	return tran.conn.Send(action.Name, action.Args)
+	return tran.conn.Send(action.Name, action.Args...)
 }
 
 func (tran *Transaction) doAction(action *Action) (interface{}, error) {
-	return tran.conn.Do(action.Name, action.Args)
+	return tran.conn.Do(action.Name, action.Args...)
 }
 
 func (tran *Transaction) numUnexecActions() int {
-	return len(tran.Actions) - tran.offset - 1
+	return len(tran.Actions) - tran.offset
 }
 
 func (tran *Transaction) exec() error {
@@ -90,6 +90,7 @@ func (tran *Transaction) exec() error {
 			return err
 		}
 	}
+
 	replies, err := redis.Values(tran.conn.Do("EXEC"))
 	if err != nil {
 		return err

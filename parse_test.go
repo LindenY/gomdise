@@ -3,57 +3,71 @@ package gomdies
 import (
 	"testing"
 	"fmt"
+	"time"
+	"github.com/garyburd/redigo/redis"
+	"os"
 )
 
-type ptsA struct {
-	ptsB
-	M map[string][]int
-}
 
-type ptsB struct {
-	M map[string]*ptsC
-}
+var pool *redis.Pool
 
-type ptsC struct {
-	Str string
-	Ls []int
-}
+func TestMain(m *testing.M) {
+	pool = &redis.Pool {
+		MaxIdle : 1,
+		IdleTimeout : 3 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			conn, err := redis.Dial("tcp", "184.107.247.74:16379")
+			if err != nil {
+				return nil, err
+			}
 
-func TestParse(t *testing.T) {
-	l0 := make([]int, 3)
-	l0[0] = 3
-	l0[1] = 4
-	l0[2] = 5
+			if password := ""; len(password) > 0 {
+				if _, err := conn.Do("AUTH", password); err != nil {
+					conn.Close();
+					return nil, err
+				}
+			}
 
-	l1 := make([]int, 2)
-	l1[0] = 6
-	l1[1] = 7
-
-	tsC0 := &ptsC{"tsC0", l0}
-	tsC1 := &ptsC{"tsC1", l1}
-	m0 := make(map[string]*ptsC)
-	m0["tsC0"] = tsC0
-	m0["tsC1"] = tsC1
-
-	m1 := make(map[string][]int)
-	m1["l0"] = l0
-	m1["l1"] = l1
-
-	tsA0 := ptsA{
-		M: m1,
-		ptsB: ptsB{m0},
+			return conn, err;
+		},
+		TestOnBorrow : func (conn redis.Conn, t time.Time) error {
+			_, err := conn.Do("PING")
+			return err
+		},
 	}
+	os.Exit(m.Run())
+}
 
+func TestParseTsB(t *testing.T) {
+	tsB := MakeTsB()
 
-	actions, err := parseSave(tsA0)
+	actions, err := parseSave(tsB)
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("%v\n", saveParserCache.m)
-	fmt.Println()
 	printActions(actions)
 
+	tran := NewTransaction(pool)
+	tran.Actions = actions
+	if err := tran.Exec(); err != nil {
+		panic(err)
+	}
+}
+
+func TestParseTsC(t *testing.T) {
+	tsC := MakeTsC()
+
+	actions, err := parseSave(tsC)
+	if err != nil {
+		panic(err)
+	}
+	printActions(actions)
+
+	tran := NewTransaction(pool)
+	tran.Actions = actions
+	if err := tran.Exec(); err != nil {
+		panic(err)
+	}
 }
 
 
