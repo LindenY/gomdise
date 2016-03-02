@@ -98,16 +98,20 @@ func (aft *arrayFindTemplate) handle(tran *Transaction, reply interface{}) error
 }
 
 func (aft *arrayFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	if _, ok := args.(string); !ok {
-		return UnsupportArgsError{
-			Msg:  "Unsupported args for arrayFindTemplate.engrave",
-			Args: args,
+	key, ok := args.(string)
+	if !ok {
+		_, err := redis.Scan([]interface{}{args}, &key)
+		if err != nil {
+			return UnsupportArgsError{
+				Msg:  "Unsupported args for arrayFindTemplate.engrave",
+				Args: args,
+			}
 		}
 	}
 
 	action := &Action{
 		Name:    "LRANGE",
-		Args:    redis.Args{args, 0, -1},
+		Args:    redis.Args{key, 0, -1},
 		Handler: aft.handle,
 	}
 	tran.pushAction(action)
@@ -130,10 +134,10 @@ func (mft *mapFindTemplate) handle(tran *Transaction, reply interface{}) error {
 	if err != nil {
 		return err
 	}
-	toggle := true
+	toggle := false
 	for _, rpy := range replies {
+		toggle = !toggle
 		if toggle {
-			toggle = false
 			continue
 		}
 		err = mft.elemEgr(tran, rpy)
@@ -145,16 +149,20 @@ func (mft *mapFindTemplate) handle(tran *Transaction, reply interface{}) error {
 }
 
 func (mft *mapFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	if _, ok := args.(string); !ok {
-		return UnsupportArgsError{
-			Msg:  "Unsupported args for mapFindTemplate.engrave",
-			Args: args,
+	key, ok := args.(string)
+	if !ok {
+		_, err := redis.Scan([]interface{}{args}, &key)
+		if err != nil {
+			return UnsupportArgsError{
+				Msg:  "Unsupported args for mapFindTemplate.engrave",
+				Args: args,
+			}
 		}
 	}
 
 	action := &Action{
 		Name:    "HGETALL",
-		Args:    redis.Args{args},
+		Args:    redis.Args{key},
 		Handler: mft.handle,
 	}
 	tran.pushAction(action)
@@ -178,10 +186,11 @@ func (sft *structFindTemplate) handle(tran *Transaction, reply interface{}) erro
 	if err != nil {
 		return err
 	}
-	toggle := true
+	toggle := false
 	for i, rpy := range replies {
+		fmt.Printf("[%d]:%v \n", i, rpy)
+		toggle = !toggle
 		if toggle {
-			toggle = false
 			continue
 		}
 		err = sft.elemEgrs[(i-1)/2](tran, rpy)
@@ -193,16 +202,20 @@ func (sft *structFindTemplate) handle(tran *Transaction, reply interface{}) erro
 }
 
 func (sft *structFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	if _, ok := args.(string); !ok {
-		return UnsupportArgsError{
-			Msg:  "Unsupported args for structFindTemplate.engrave",
-			Args: args,
+	key, ok := args.(string)
+	if !ok {
+		_, err := redis.Scan([]interface{}{args}, &key)
+		if err != nil {
+			return UnsupportArgsError{
+				Msg:  "Unsupported args for structFindTemplate.engrave",
+				Args: args,
+			}
 		}
 	}
 
 	action := &Action{
 		Name:    "HGETALL",
-		Args:    redis.Args{args},
+		Args:    redis.Args{key},
 		Handler: sft.handle,
 	}
 	tran.pushAction(action)
@@ -265,5 +278,5 @@ type UnsupportArgsError struct {
 }
 
 func (uaerr UnsupportArgsError) Error() string {
-	return fmt.Sprint("[%v]\t%s", uaerr.Args, uaerr.Msg)
+	return fmt.Sprintf("[%v]\t%s", uaerr.Args, uaerr.Msg)
 }

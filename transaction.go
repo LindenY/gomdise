@@ -61,10 +61,12 @@ func (tran *Transaction) setError(err error) {
 }
 
 func (tran *Transaction) sendAction(action *Action) error {
+	fmt.Printf("send action: %v \n", action)
 	return tran.conn.Send(action.Name, action.Args...)
 }
 
 func (tran *Transaction) doAction(action *Action) (interface{}, error) {
+	fmt.Printf("do action: %v \n", action)
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
@@ -74,12 +76,14 @@ func (tran *Transaction) numUnexecActions() int {
 
 func (tran *Transaction) exec() error {
 	if tran.numUnexecActions() == 1 {
-		reply, err := tran.doAction(tran.Actions[0])
+		reply, err := redis.Values(tran.doAction(tran.Actions[0]))
+		tran.offset ++
 		if err != nil {
 			return err
 		}
+		fmt.Printf("reply: %v \n", reply)
 		tran.Replies = append(tran.Replies, reply)
-		return tran.Actions[0].handle(tran, reply)
+		return tran.Actions[tran.offset-1].handle(tran, reply)
 	}
 
 	if err := tran.conn.Send("MULTI"); err != nil {
@@ -90,18 +94,22 @@ func (tran *Transaction) exec() error {
 			return err
 		}
 	}
+	prevOffset := tran.offset
+	tran.offset = len(tran.Actions)
 
 	replies, err := redis.Values(tran.conn.Do("EXEC"))
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("reply: %v \n", replies)
 	for i, reply := range replies {
+		fmt.Printf("\t[%d]: %v \n", i, reply)
 		tran.Replies = append(tran.Replies, reply)
-		if err := tran.Actions[tran.offset+i].handle(tran, reply); err != nil {
+		if err = tran.Actions[prevOffset+i].handle(tran, reply); err != nil {
 			break
 		}
 	}
-	tran.offset = len(tran.Actions)
 	return err
 }
 
