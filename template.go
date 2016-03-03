@@ -8,11 +8,11 @@ import (
 )
 
 type ActionTemplate interface {
-	handle(tran *Transaction, reply interface{}) error
-	engrave(tran *Transaction, args interface{}) error
+	handle(tran *Transaction, action *Action, reply interface{}) error
+	engrave(args ...interface{}) *Action
 }
 
-type ArgsEngraver func(tran *Transaction, args interface{}) error
+type ArgsEngraver func(args ...interface{}) *Action
 
 var findTemplateCache struct {
 	sync.RWMutex
@@ -50,14 +50,14 @@ type proxyTemplate struct {
 	dest ActionTemplate
 }
 
-func (pt *proxyTemplate) handle(tran *Transaction, reply interface{}) error {
+func (pt *proxyTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
 	pt.wg.Wait()
-	return pt.dest.handle(tran, reply)
+	return pt.dest.handle(tran, action, reply)
 }
 
-func (pt *proxyTemplate) engrave(tran *Transaction, args interface{}) error {
+func (pt *proxyTemplate) engrave(args ...interface{}) *Action {
 	pt.wg.Wait()
-	return pt.dest.engrave(tran, args)
+	return pt.dest.engrave(args...)
 }
 
 func newFindTemplateForType(t reflect.Type) ActionTemplate {
@@ -83,29 +83,23 @@ type arrayFindTemplate struct {
 	elemEgr ArgsEngraver
 }
 
-func (aft *arrayFindTemplate) handle(tran *Transaction, reply interface{}) error {
+func (aft *arrayFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
 		return err
 	}
 	for _, rpy := range replies {
-		err = aft.elemEgr(tran, rpy)
-		if err != nil {
-			return err
-		}
+		action.addChild(aft.elemEgr(rpy))
 	}
 	return nil
 }
 
-func (aft *arrayFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	key, ok := args.(string)
+func (aft *arrayFindTemplate) engrave(args ...interface{}) *Action {
+	key, ok := args[0].(string)
 	if !ok {
-		_, err := redis.Scan([]interface{}{args}, &key)
+		_, err := redis.Scan(args, &key)
 		if err != nil {
-			return UnsupportArgsError{
-				Msg:  "Unsupported args for arrayFindTemplate.engrave",
-				Args: args,
-			}
+			panic(err)
 		}
 	}
 
@@ -114,8 +108,7 @@ func (aft *arrayFindTemplate) engrave(tran *Transaction, args interface{}) error
 		Args:    redis.Args{key, 0, -1},
 		Handler: aft.handle,
 	}
-	tran.pushAction(action)
-	return nil
+	return action
 }
 
 func newArrayFindTemplate(t reflect.Type) *arrayFindTemplate {
@@ -129,7 +122,7 @@ type mapFindTemplate struct {
 	elemEgr ArgsEngraver
 }
 
-func (mft *mapFindTemplate) handle(tran *Transaction, reply interface{}) error {
+func (mft *mapFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
 		return err
@@ -140,23 +133,17 @@ func (mft *mapFindTemplate) handle(tran *Transaction, reply interface{}) error {
 		if toggle {
 			continue
 		}
-		err = mft.elemEgr(tran, rpy)
-		if err != nil {
-			return err
-		}
+		action.addChild(mft.elemEgr(rpy))
 	}
 	return nil
 }
 
-func (mft *mapFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	key, ok := args.(string)
+func (mft *mapFindTemplate) engrave(args ...interface{}) *Action {
+	key, ok := args[0].(string)
 	if !ok {
-		_, err := redis.Scan([]interface{}{args}, &key)
+		_, err := redis.Scan(args, &key)
 		if err != nil {
-			return UnsupportArgsError{
-				Msg:  "Unsupported args for mapFindTemplate.engrave",
-				Args: args,
-			}
+			panic(err)
 		}
 	}
 
@@ -165,8 +152,7 @@ func (mft *mapFindTemplate) engrave(tran *Transaction, args interface{}) error {
 		Args:    redis.Args{key},
 		Handler: mft.handle,
 	}
-	tran.pushAction(action)
-	return nil
+	return action
 }
 
 func newMapFindTemplate(t reflect.Type) *mapFindTemplate {
@@ -181,35 +167,28 @@ type structFindTemplate struct {
 	elemEgrs []ArgsEngraver
 }
 
-func (sft *structFindTemplate) handle(tran *Transaction, reply interface{}) error {
+func (sft *structFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
 		return err
 	}
 	toggle := false
 	for i, rpy := range replies {
-		fmt.Printf("[%d]:%v \n", i, rpy)
 		toggle = !toggle
 		if toggle {
 			continue
 		}
-		err = sft.elemEgrs[(i-1)/2](tran, rpy)
-		if err != nil {
-			return err
-		}
+		action.addChild(sft.elemEgrs[(i-1)/2](rpy))
 	}
 	return nil
 }
 
-func (sft *structFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	key, ok := args.(string)
+func (sft *structFindTemplate) engrave(args ...interface{}) *Action {
+	key, ok := args[0].(string)
 	if !ok {
-		_, err := redis.Scan([]interface{}{args}, &key)
+		_, err := redis.Scan(args, &key)
 		if err != nil {
-			return UnsupportArgsError{
-				Msg:  "Unsupported args for structFindTemplate.engrave",
-				Args: args,
-			}
+			panic(err)
 		}
 	}
 
@@ -218,8 +197,7 @@ func (sft *structFindTemplate) engrave(tran *Transaction, args interface{}) erro
 		Args:    redis.Args{key},
 		Handler: sft.handle,
 	}
-	tran.pushAction(action)
-	return nil
+	return action
 }
 
 func newStructFindTemplate(t reflect.Type) *structFindTemplate {
@@ -239,12 +217,12 @@ type pointerFindTemplate struct {
 	elemTpl ActionTemplate
 }
 
-func (pft *pointerFindTemplate) handle(tran *Transaction, reply interface{}) error {
-	return pft.elemTpl.handle(tran, reply)
+func (pft *pointerFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
+	return pft.elemTpl.handle(tran, action, reply)
 }
 
-func (pft *pointerFindTemplate) engrave(tran *Transaction, args interface{}) error {
-	return pft.elemTpl.engrave(tran, args)
+func (pft *pointerFindTemplate) engrave(args ...interface{}) *Action {
+	return pft.elemTpl.engrave(args)
 }
 
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {
@@ -255,11 +233,11 @@ func newPointerFindTemplate(t reflect.Type) ActionTemplate {
 type voidFindTemplate struct {
 }
 
-func (vft *voidFindTemplate) engrave(tran *Transaction, args interface{}) error {
+func (vft *voidFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
 	return nil
 }
 
-func (vft *voidFindTemplate) handle(tran *Transaction, reply interface{}) error {
+func (vft *voidFindTemplate) engrave(args ...interface{}) *Action {
 	return nil
 }
 

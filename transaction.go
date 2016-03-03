@@ -7,7 +7,7 @@ import (
 
 type Transaction struct {
 	conn    redis.Conn
-	offset  int
+
 	Actions []*Action
 	Replies []interface{}
 	Err     error
@@ -17,15 +17,23 @@ type Action struct {
 	Name    string
 	Args    redis.Args
 	Handler ReplyHandler
+	Children []*Action
 }
 
-type ReplyHandler func(tran *Transaction, reply interface{}) error
+type ReplyHandler func(tran *Transaction, action *Action, reply interface{}) error
 
 func (action *Action) handle(trans *Transaction, reply interface{}) error {
 	if action.Handler != nil {
-		return action.Handler(trans, reply)
+		return action.Handler(trans, action, reply)
 	}
 	return nil
+}
+
+func (action *Action) addChild(child *Action) {
+	if child == nil {
+		return
+	}
+	action.Children = append(action.Children, child)
 }
 
 func (action *Action) String() string {
@@ -70,32 +78,25 @@ func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
-func (tran *Transaction) numUnexecActions() int {
-	return len(tran.Actions) - tran.offset
-}
-
 func (tran *Transaction) exec() error {
-	if tran.numUnexecActions() == 1 {
+	if len(tran.Actions) == 1 {
 		reply, err := redis.Values(tran.doAction(tran.Actions[0]))
-		tran.offset ++
 		if err != nil {
 			return err
 		}
 		fmt.Printf("reply: %v \n", reply)
 		tran.Replies = append(tran.Replies, reply)
-		return tran.Actions[tran.offset-1].handle(tran, reply)
+		return tran.Actions[0].handle(tran, reply)
 	}
 
 	if err := tran.conn.Send("MULTI"); err != nil {
 		return err
 	}
-	for i := tran.offset; i < len(tran.Actions); i++ {
-		if err := tran.sendAction(tran.Actions[i]); err != nil {
+	for _, action := range tran.Actions {
+		if err := tran.sendAction(action); err != nil {
 			return err
 		}
 	}
-	prevOffset := tran.offset
-	tran.offset = len(tran.Actions)
 
 	replies, err := redis.Values(tran.conn.Do("EXEC"))
 	if err != nil {
@@ -105,8 +106,8 @@ func (tran *Transaction) exec() error {
 	fmt.Printf("reply: %v \n", replies)
 	for i, reply := range replies {
 		fmt.Printf("\t[%d]: %v \n", i, reply)
-		tran.Replies = append(tran.Replies, reply)
-		if err = tran.Actions[prevOffset+i].handle(tran, reply); err != nil {
+
+		if err = tran.Actions[i].handle(tran, reply); err != nil {
 			break
 		}
 	}
@@ -118,10 +119,20 @@ func (tran *Transaction) Exec() error {
 	if tran.Err != nil {
 		return tran.Err
 	}
-	for tran.numUnexecActions() > 0 {
+
+	for len(tran.Actions) > 0 {
 		if err := tran.exec(); err != nil {
 			return err
 		}
+
+		next := make([]*Action, 0)
+		for _, action := range tran.Actions {
+			if len(action.Children) > 0 {
+				next = append(next, action.Children...)
+			}
+		}
+		tran.Actions = next
+		fmt.Println(len(tran.Actions))
 	}
 	return nil
 }
