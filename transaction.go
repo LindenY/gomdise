@@ -21,13 +21,12 @@ type Action struct {
 }
 
 
-type ReplyHandler func(tran *Transaction, action *Action, reply interface{}) error
+type ReplyHandler func(tran *Transaction, action *Action, reply interface{})
 
-func (action *Action) handle(trans *Transaction, reply interface{}) error {
+func (action *Action) handle(trans *Transaction, reply interface{}) {
 	if action.Handler != nil {
-		return action.Handler(trans, action, reply)
+		action.Handler(trans, action, reply)
 	}
-	return nil
 }
 
 func (action *Action) addChild(child *Action) {
@@ -79,51 +78,58 @@ func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
-func (tran *Transaction) exec(node *mnode) error {
+func (tran *Transaction) exec(node *MNode) {
 	if len(tran.Actions) == 1 {
-		reply, err := redis.Values(tran.doAction(tran.Actions[0]))
+		reply, err := tran.doAction(tran.Actions[0])
 		if err != nil {
-			return err
+			panic(err)
 		}
-		fmt.Printf("reply: %v \n", reply)
-		tran.Replies = append(tran.Replies, reply)
-		return tran.Actions[0].handle(tran, reply)
+		tran.handle(node, reply)
+		return
 	}
 
 	if err := tran.conn.Send("MULTI"); err != nil {
-		return err
+		panic(err)
 	}
 	for _, action := range tran.Actions {
 		if err := tran.sendAction(action); err != nil {
-			return err
+			panic(err)
 		}
 	}
-
-	replies, err := redis.Values(tran.conn.Do("EXEC"))
+	reply, err := tran.conn.Do("EXEC")
 	if err != nil {
-		return err
+		panic(err)
 	}
-
-	fmt.Printf("reply: %v \n", replies)
-	for i, reply := range replies {
-		fmt.Printf("\t[%d]: %v \n", i, reply)
-
-		if err = tran.Actions[i].handle(tran, reply); err != nil {
-			break
-		}
-	}
-	return err
+	tran.handle(node, reply)
 }
 
-func (tran *Transaction) Exec() *mnode {
+func (tran *Transaction) handle(node *MNode, reply interface{}) {
+	var replies []interface{}
+	if len(tran.Actions) == 1 {
+		replies = []interface{}{reply}
+	} else {
+		var err error
+		replies, err = redis.Values(reply, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Printf("Num Action:%d, Num Replies:%d \n", len(tran.Actions), len(replies))
+	for i, action := range tran.Actions {
+		fmt.Printf("\t[%d]: %v \n", i, action)
+		fmt.Printf("\t \t %v \n", replies[i])
+		action.handle(tran, replies[i])
+	}
+}
+
+func (tran *Transaction) Exec() *MNode {
 	defer tran.conn.Close()
 
 
 	root := newMNode(nil)
 	for len(tran.Actions) > 0 {
-		if err := tran.exec(root); err != nil {
-			return err
-		}
+		tran.exec(root)
 
 		next := make([]*Action, 0)
 		for _, action := range tran.Actions {

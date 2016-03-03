@@ -8,7 +8,7 @@ import (
 )
 
 type ActionTemplate interface {
-	handle(tran *Transaction, action *Action, reply interface{}) error
+	handle(tran *Transaction, action *Action, reply interface{})
 	engrave(args ...interface{}) *Action
 }
 
@@ -50,9 +50,9 @@ type proxyTemplate struct {
 	dest ActionTemplate
 }
 
-func (pt *proxyTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
+func (pt *proxyTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
 	pt.wg.Wait()
-	return pt.dest.handle(tran, action, reply)
+	pt.dest.handle(tran, action, reply)
 }
 
 func (pt *proxyTemplate) engrave(args ...interface{}) *Action {
@@ -83,15 +83,14 @@ type arrayFindTemplate struct {
 	elemEgr ArgsEngraver
 }
 
-func (aft *arrayFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
+func (aft *arrayFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	for _, rpy := range replies {
 		action.addChild(aft.elemEgr(rpy))
 	}
-	return nil
 }
 
 func (aft *arrayFindTemplate) engrave(args ...interface{}) *Action {
@@ -122,10 +121,10 @@ type mapFindTemplate struct {
 	elemEgr ArgsEngraver
 }
 
-func (mft *mapFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
+func (mft *mapFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	toggle := false
 	for _, rpy := range replies {
@@ -135,7 +134,6 @@ func (mft *mapFindTemplate) handle(tran *Transaction, action *Action, reply inte
 		}
 		action.addChild(mft.elemEgr(rpy))
 	}
-	return nil
 }
 
 func (mft *mapFindTemplate) engrave(args ...interface{}) *Action {
@@ -167,10 +165,10 @@ type structFindTemplate struct {
 	elemEgrs []ArgsEngraver
 }
 
-func (sft *structFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
+func (sft *structFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
 	replies, err := redis.Values(reply, nil)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	toggle := false
 	for i, rpy := range replies {
@@ -180,7 +178,6 @@ func (sft *structFindTemplate) handle(tran *Transaction, action *Action, reply i
 		}
 		action.addChild(sft.elemEgrs[(i-1)/2](rpy))
 	}
-	return nil
 }
 
 func (sft *structFindTemplate) engrave(args ...interface{}) *Action {
@@ -217,8 +214,8 @@ type pointerFindTemplate struct {
 	elemTpl ActionTemplate
 }
 
-func (pft *pointerFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
-	return pft.elemTpl.handle(tran, action, reply)
+func (pft *pointerFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
+	pft.elemTpl.handle(tran, action, reply)
 }
 
 func (pft *pointerFindTemplate) engrave(args ...interface{}) *Action {
@@ -233,8 +230,7 @@ func newPointerFindTemplate(t reflect.Type) ActionTemplate {
 type voidFindTemplate struct {
 }
 
-func (vft *voidFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) error {
-	return nil
+func (vft *voidFindTemplate) handle(tran *Transaction, action *Action, reply interface{}) {
 }
 
 func (vft *voidFindTemplate) engrave(args ...interface{}) *Action {

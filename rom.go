@@ -1,21 +1,21 @@
 package gomdies
 
 
-type mnode struct {
-	parent *mnode
-	children []*mnode
+type MNode struct {
+	parent *MNode
+	children []*MNode
 	obj interface{}
 }
 
 
-func newMNode(obj interface{}) *mnode {
-	return &mnode{
-		children:make([]*mnode, 0),
+func newMNode(obj interface{}) *MNode {
+	return &MNode{
+		children:make([]*MNode, 0),
 		obj:obj,
 	}
 }
 
-func (node *mnode) addChild(child *mnode) {
+func (node *MNode) addChild(child *MNode) {
 	if child == nil {
 		return
 	}
