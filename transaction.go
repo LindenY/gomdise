@@ -20,6 +20,7 @@ type Action struct {
 	Children []*Action
 }
 
+
 type ReplyHandler func(tran *Transaction, action *Action, reply interface{}) error
 
 func (action *Action) handle(trans *Transaction, reply interface{}) error {
@@ -78,7 +79,7 @@ func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
-func (tran *Transaction) exec() error {
+func (tran *Transaction) exec(node *mnode) error {
 	if len(tran.Actions) == 1 {
 		reply, err := redis.Values(tran.doAction(tran.Actions[0]))
 		if err != nil {
@@ -114,14 +115,13 @@ func (tran *Transaction) exec() error {
 	return err
 }
 
-func (tran *Transaction) Exec() error {
+func (tran *Transaction) Exec() *mnode {
 	defer tran.conn.Close()
-	if tran.Err != nil {
-		return tran.Err
-	}
 
+
+	root := newMNode(nil)
 	for len(tran.Actions) > 0 {
-		if err := tran.exec(); err != nil {
+		if err := tran.exec(root); err != nil {
 			return err
 		}
 
