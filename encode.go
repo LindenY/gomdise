@@ -1,8 +1,8 @@
 package gomdies
 
 import (
-	_"reflect"
-	_"sync"
+	_ "reflect"
+	_ "sync"
 )
 
 /*

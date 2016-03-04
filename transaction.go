@@ -7,44 +7,14 @@ import (
 
 type Transaction struct {
 	conn    redis.Conn
-
 	Actions []*Action
-	Replies []interface{}
 	Err     error
-}
-
-type Action struct {
-	Name    string
-	Args    redis.Args
-	Handler ReplyHandler
-	Children []*Action
-}
-
-
-type ReplyHandler func(tran *Transaction, action *Action, reply interface{})
-
-func (action *Action) handle(trans *Transaction, reply interface{}) {
-	if action.Handler != nil {
-		action.Handler(trans, action, reply)
-	}
-}
-
-func (action *Action) addChild(child *Action) {
-	if child == nil {
-		return
-	}
-	action.Children = append(action.Children, child)
-}
-
-func (action *Action) String() string {
-	return fmt.Sprintf("%s\t%v", action.Name, action.Args)
 }
 
 func NewTransaction(pool *redis.Pool) *Transaction {
 	t := &Transaction{
-		conn: pool.Get(),
-		Actions:make([]*Action, 0),
-		Replies:make([]interface{}, 0),
+		conn:    pool.Get(),
+		Actions: make([]*Action, 0),
 	}
 	return t
 }
@@ -54,11 +24,11 @@ func (tran *Transaction) pushAction(action *Action) {
 }
 
 func (tran *Transaction) popAction() *Action {
-	if (len(tran.Actions) == 0) {
+	if len(tran.Actions) == 0 {
 		return nil
 	}
-	ret := tran.Actions[len(tran.Actions) - 1]
-	tran.Actions = tran.Actions[0:len(tran.Actions) - 1]
+	ret := tran.Actions[len(tran.Actions)-1]
+	tran.Actions = tran.Actions[0 : len(tran.Actions)-1]
 	return ret
 }
 
@@ -78,13 +48,13 @@ func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
-func (tran *Transaction) exec(node *MNode) {
+func (tran *Transaction) exec() {
 	if len(tran.Actions) == 1 {
 		reply, err := tran.doAction(tran.Actions[0])
 		if err != nil {
 			panic(err)
 		}
-		tran.handle(node, reply)
+		tran.handle(reply)
 		return
 	}
 
@@ -100,10 +70,10 @@ func (tran *Transaction) exec(node *MNode) {
 	if err != nil {
 		panic(err)
 	}
-	tran.handle(node, reply)
+	tran.handle(reply)
 }
 
-func (tran *Transaction) handle(node *MNode, reply interface{}) {
+func (tran *Transaction) handle(reply interface{}) {
 	var replies []interface{}
 	if len(tran.Actions) == 1 {
 		replies = []interface{}{reply}
@@ -119,26 +89,23 @@ func (tran *Transaction) handle(node *MNode, reply interface{}) {
 	for i, action := range tran.Actions {
 		fmt.Printf("\t[%d]: %v \n", i, action)
 		fmt.Printf("\t \t %v \n", replies[i])
+
+		action.Reply = replies[i]
 		action.handle(tran, replies[i])
 	}
 }
 
-func (tran *Transaction) Exec() *MNode {
+func (tran *Transaction) Exec() {
 	defer tran.conn.Close()
 
-
-	root := newMNode(nil)
 	for len(tran.Actions) > 0 {
-		tran.exec(root)
+		tran.exec()
 
 		next := make([]*Action, 0)
 		for _, action := range tran.Actions {
-			if len(action.Children) > 0 {
-				next = append(next, action.Children...)
-			}
+			next = append(next, action.Children...)
 		}
 		tran.Actions = next
 		fmt.Println(len(tran.Actions))
 	}
-	return nil
 }

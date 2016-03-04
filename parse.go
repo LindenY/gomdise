@@ -250,13 +250,9 @@ type UnsupportedTypeError struct {
 	Type reflect.Type
 }
 
-
-
 type findFunc func(pstate *parseState, v reflect.Value, key string)
 
 func parseFind(v interface{}, key string) {
-
-
 
 }
 
@@ -269,10 +265,10 @@ type arrayFindParser struct {
 	handler  ReplyHandler
 }
 
-func (afp *arrayFindParser)parse(pstate *parseState, v reflect.Value, key string) {
+func (afp *arrayFindParser) parse(pstate *parseState, v reflect.Value, key string) {
 	action := &Action{
-		Name:"LRANGE",
-		Args:redis.Args{key, 0, -1},
+		Name: "LRANGE",
+		Args: redis.Args{key, 0, -1},
 	}
 	pstate.pushAction(action)
 }

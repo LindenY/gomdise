@@ -1,10 +1,9 @@
 package gomdies
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
-
 
 type tsA struct {
 	IntVal int
@@ -14,12 +13,12 @@ type tsA struct {
 
 type tsB struct {
 	MStrSrt map[string]tsA
-	LSrtVal	[]tsA
+	LSrtVal []tsA
 }
 
 type tsC struct {
 	MStrStrSrt map[string]map[string]*tsA
-	LLSrtVal [][]*tsA
+	LLSrtVal   [][]*tsA
 }
 
 type tsD struct {
@@ -102,5 +101,3 @@ func TestMultipleEmbeddedStruct(t *testing.T) {
 func TestMultipleNestedStruct(t *testing.T) {
 
 }
-
-

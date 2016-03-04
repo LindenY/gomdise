@@ -1,9 +1,9 @@
 package gomdies
 
 import (
-	"reflect"
-	"github.com/satori/go.uuid"
 	"fmt"
+	"github.com/satori/go.uuid"
+	"reflect"
 )
 
 var (

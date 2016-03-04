@@ -5,15 +5,14 @@ import (
 	"sync"
 )
 
-
 type fieldSpec struct {
-	name string
+	name  string
 	index []int
-	tag bool
-	typ reflect.Type
+	tag   bool
+	typ   reflect.Type
 }
 
-func (fldSpec *fieldSpec)valueOf(v reflect.Value) reflect.Value {
+func (fldSpec *fieldSpec) valueOf(v reflect.Value) reflect.Value {
 	retVal := v
 	for _, fldIdx := range fldSpec.index {
 		retVal = retVal.Field(fldIdx)
@@ -28,7 +27,7 @@ type structSpec struct {
 func compileStructSpec(t reflect.Type) *structSpec {
 
 	current := []fieldSpec{}
-	next := []fieldSpec{ {typ:t} }
+	next := []fieldSpec{{typ: t}}
 
 	visited := map[reflect.Type]bool{}
 
@@ -44,7 +43,7 @@ func compileStructSpec(t reflect.Type) *structSpec {
 
 			// Scan fs.type for fields to include
 			for i := 0; i < fs.typ.NumField(); i++ {
-				sfs := fs.typ.Field(i);
+				sfs := fs.typ.Field(i)
 
 				if sfs.PkgPath != "" && !sfs.Anonymous { // unexported
 					continue
@@ -59,7 +58,7 @@ func compileStructSpec(t reflect.Type) *structSpec {
 					name = ""
 				}
 
-				index := make([]int, len(fs.index) + 1)
+				index := make([]int, len(fs.index)+1)
 				copy(index, fs.index)
 				index[len(fs.index)] = i
 
@@ -74,18 +73,18 @@ func compileStructSpec(t reflect.Type) *structSpec {
 						name = sfs.Name
 					}
 					fieldSpecs = append(fieldSpecs, &fieldSpec{
-						name: name,
-						tag: tagged,
+						name:  name,
+						tag:   tagged,
 						index: index,
-						typ: ft,
+						typ:   ft,
 					})
 					continue
 				}
 
 				next = append(next, fieldSpec{
-					name: ft.Name(),
+					name:  ft.Name(),
 					index: index,
-					typ: ft,
+					typ:   ft,
 				})
 			}
 		}
@@ -105,7 +104,7 @@ func structSpecForType(t reflect.Type) *structSpec {
 	ss := structSpecCache.m[t]
 	structSpecCache.RUnlock()
 
-	if (ss != nil) {
+	if ss != nil {
 		return ss
 	}
 

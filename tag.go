@@ -14,7 +14,6 @@ func parseTag(tag string) (string, tagOptions) {
 	return tag, tagOptions("")
 }
 
-
 func isValidTag(tag string) bool {
 	if tag == "" {
 		return false
