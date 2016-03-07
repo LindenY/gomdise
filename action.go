@@ -10,7 +10,9 @@ type Action struct {
 	Args     redis.Args
 	Reply    interface{}
 	Handler  ReplyHandler
-	Children []*Action
+
+	parent   *Action
+	children []*Action
 }
 
 type ReplyHandler func(tran *Transaction, action *Action, reply interface{})
@@ -25,7 +27,29 @@ func (action *Action) addChild(child *Action) {
 	if child == nil {
 		return
 	}
-	action.Children = append(action.Children, child)
+	child.parent = action
+	action.children = append(action.children, child)
+}
+
+func (action *Action) Parent() RMNode {
+	return action.parent
+}
+
+func (action *Action) Child(index int) RMNode {
+	return action.children[index]
+}
+
+func (action *Action) Children(start int, end int) []RMNode {
+	actions := action.children[start:end]
+	nodes := make([]RMNode, len(actions))
+	for i, a := range actions {
+		nodes[i] = a
+	}
+	return nodes
+}
+
+func (action *Action) Size() int {
+	return len(action.children)
 }
 
 func (action *Action) String() string {

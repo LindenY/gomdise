@@ -103,7 +103,7 @@ func (tran *Transaction) Exec() {
 
 		next := make([]*Action, 0)
 		for _, action := range tran.Actions {
-			next = append(next, action.Children...)
+			next = append(next, action.children...)
 		}
 		tran.Actions = next
 		fmt.Println(len(tran.Actions))
