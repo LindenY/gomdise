@@ -1,9 +1,9 @@
 package gomdies
 
 import (
-	"testing"
-	"reflect"
 	"fmt"
+	"reflect"
+	"testing"
 )
 
 func TestDecodeTsB(t *testing.T) {
@@ -21,4 +21,3 @@ func TestDecodeTsB(t *testing.T) {
 
 	fmt.Printf("%v \n", tsB)
 }
-

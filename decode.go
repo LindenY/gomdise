@@ -59,7 +59,6 @@ func newValueForType(t reflect.Type) reflect.Value {
 }
 
 func newTypeDecoder(t reflect.Type) decodeFunc {
-
 	switch t.Kind() {
 	case reflect.Bool:
 		return booleanDecoder
@@ -169,9 +168,6 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 	}
 	size := len(values) / 2
 
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
 	for i := 0; i < size; i++ {
 		fldVal := srtDec.spec.fields[i].valueOf(v)
 		if i < node.Size() {
