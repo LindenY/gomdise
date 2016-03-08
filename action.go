@@ -52,6 +52,10 @@ func (action *Action) Size() int {
 	return len(action.children)
 }
 
+func (action *Action) Value() interface{} {
+	return action.Reply
+}
+
 func (action *Action) String() string {
 	return fmt.Sprintf("%s\t%v", action.Name, action.Args)
 }

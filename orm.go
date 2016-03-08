@@ -11,4 +11,6 @@ type RMNode interface {
 
 	Size() int
 
+	Value() interface{}
+
 }
