@@ -50,10 +50,16 @@ func decoderForType(t reflect.Type) decodeFunc {
 }
 
 func newValueForType(t reflect.Type) reflect.Value {
-	return reflect.Zero(t)
+	switch t.Kind() {
+	case reflect.Struct:
+		return reflect.New(t).Elem()
+	default:
+		return reflect.Zero(t)
+	}
 }
 
 func newTypeDecoder(t reflect.Type) decodeFunc {
+
 	switch t.Kind() {
 	case reflect.Bool:
 		return booleanDecoder
@@ -69,6 +75,8 @@ func newTypeDecoder(t reflect.Type) decodeFunc {
 		return newArrayDecoder(t)
 	case reflect.Struct:
 		return newStructDecoder(t)
+	case reflect.Ptr:
+		return newPointerDecoder(t)
 	default:
 		return unsupportedTypeDecoder
 	}
@@ -115,11 +123,14 @@ func (mapDec *mapDecoder) decode(node RMNode, data interface{}, v reflect.Value)
 		panic(err)
 	}
 
-	size := len(values)
+	size := len(values) / 2
 	vals, err := redis.Values(node.Value(), nil)
 	if err != nil {
 		panic(err)
 	}
+
+	newV := reflect.MakeMap(v.Type())
+	v.Set(newV)
 
 	for i := 0; i < size; i++ {
 		mKey, err := redis.String(values[i*2], nil)
@@ -127,7 +138,7 @@ func (mapDec *mapDecoder) decode(node RMNode, data interface{}, v reflect.Value)
 			panic(err)
 		}
 
-		elemV := newValueForType(v.Elem().Type())
+		elemV := newValueForType(v.Type().Elem())
 
 		if i < node.Size() {
 			mapDec.elemFunc(node.Child(i), vals[i*2+1], elemV)
@@ -156,10 +167,18 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 	if err != nil {
 		panic(err)
 	}
-	size := len(values)
+	size := len(values) / 2
 
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
 	for i := 0; i < size; i++ {
-
+		fldVal := srtDec.spec.fields[i].valueOf(v)
+		if i < node.Size() {
+			srtDec.elemFuncs[i](node.Child(i), values[i*2+1], fldVal)
+		} else {
+			srtDec.elemFuncs[i](node, values[i*2+1], fldVal)
+		}
 	}
 }
 
@@ -174,6 +193,19 @@ func newStructDecoder(t reflect.Type) decodeFunc {
 		srtDec.elemFuncs[i] = decoderForType(fld.typ)
 	}
 	return srtDec.decode
+}
+
+type pointerDecoder struct {
+	elemFunc decodeFunc
+}
+
+func (ptrDec *pointerDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+	ptrDec.elemFunc(node, data, v.Elem())
+}
+
+func newPointerDecoder(t reflect.Type) decodeFunc {
+	ptrDec := &pointerDecoder{decoderForType(t.Elem())}
+	return ptrDec.decode
 }
 
 func booleanDecoder(node RMNode, data interface{}, v reflect.Value) {
