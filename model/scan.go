@@ -5,45 +5,45 @@ import (
 	"sync"
 )
 
-type fieldSpec struct {
-	name  string
-	index []int
-	tag   bool
-	typ   reflect.Type
+type FieldSpec struct {
+	Name  string
+	Index []int
+	Tag   bool
+	Typ   reflect.Type
 }
 
-func (fldSpec *fieldSpec) valueOf(v reflect.Value) reflect.Value {
+func (fldSpec *FieldSpec) valueOf(v reflect.Value) reflect.Value {
 	retVal := v
-	for _, fldIdx := range fldSpec.index {
+	for _, fldIdx := range fldSpec.Index {
 		retVal = retVal.Field(fldIdx)
 	}
 	return retVal
 }
 
-type structSpec struct {
-	fields []*fieldSpec
+type StructSpec struct {
+	Fields []*FieldSpec
 }
 
-func compileStructSpec(t reflect.Type) *structSpec {
+func compileStructSpec(t reflect.Type) *StructSpec {
 
-	current := []fieldSpec{}
-	next := []fieldSpec{{typ: t}}
+	current := []FieldSpec{}
+	next := []FieldSpec{{Typ: t}}
 
 	visited := map[reflect.Type]bool{}
 
-	fieldSpecs := make([]*fieldSpec, 0)
+	fieldSpecs := make([]*FieldSpec, 0)
 	for len(next) > 0 {
 		current, next = next, current[:0]
 
 		for _, fs := range current {
-			if visited[fs.typ] {
+			if visited[fs.Typ] {
 				continue
 			}
-			visited[fs.typ] = true
+			visited[fs.Typ] = true
 
 			// Scan fs.type for fields to include
-			for i := 0; i < fs.typ.NumField(); i++ {
-				sfs := fs.typ.Field(i)
+			for i := 0; i < fs.Typ.NumField(); i++ {
+				sfs := fs.Typ.Field(i)
 
 				if sfs.PkgPath != "" && !sfs.Anonymous { // unexported
 					continue
@@ -58,9 +58,9 @@ func compileStructSpec(t reflect.Type) *structSpec {
 					name = ""
 				}
 
-				index := make([]int, len(fs.index)+1)
-				copy(index, fs.index)
-				index[len(fs.index)] = i
+				index := make([]int, len(fs.Index)+1)
+				copy(index, fs.Index)
+				index[len(fs.Index)] = i
 
 				ft := sfs.Type
 				for ft.Name() == "" && ft.Kind() == reflect.Ptr { // follow the pointer
@@ -72,33 +72,33 @@ func compileStructSpec(t reflect.Type) *structSpec {
 					if name == "" {
 						name = sfs.Name
 					}
-					fieldSpecs = append(fieldSpecs, &fieldSpec{
-						name:  name,
-						tag:   tagged,
-						index: index,
-						typ:   ft,
+					fieldSpecs = append(fieldSpecs, &FieldSpec{
+						Name:  name,
+						Tag:   tagged,
+						Index: index,
+						Typ:   ft,
 					})
 					continue
 				}
 
-				next = append(next, fieldSpec{
-					name:  ft.Name(),
-					index: index,
-					typ:   ft,
+				next = append(next, FieldSpec{
+					Name:  ft.Name(),
+					Index: index,
+					Typ:   ft,
 				})
 			}
 		}
 	}
 
-	return &structSpec{fieldSpecs}
+	return &StructSpec{fieldSpecs}
 }
 
 var structSpecCache struct {
 	sync.RWMutex
-	m map[reflect.Type]*structSpec
+	m map[reflect.Type]*StructSpec
 }
 
-func structSpecForType(t reflect.Type) *structSpec {
+func StructSpecForType(t reflect.Type) *StructSpec {
 
 	structSpecCache.RLock()
 	ss := structSpecCache.m[t]
@@ -111,7 +111,7 @@ func structSpecForType(t reflect.Type) *structSpec {
 	ss = compileStructSpec(t)
 	structSpecCache.Lock()
 	if structSpecCache.m == nil {
-		structSpecCache.m = map[reflect.Type]*structSpec{}
+		structSpecCache.m = map[reflect.Type]*StructSpec{}
 	}
 	structSpecCache.m[t] = ss
 	structSpecCache.Unlock()

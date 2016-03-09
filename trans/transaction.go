@@ -1,4 +1,4 @@
-package gomdies
+package trans
 
 import (
 	"fmt"
@@ -86,7 +86,9 @@ func (tran *Transaction) handle(reply interface{}) {
 	}
 
 	fmt.Printf("Num Action:%d, Num Replies:%d \n", len(tran.Actions), len(replies))
-	for i, action := range tran.Actions {
+	prev := tran.Actions
+	tran.Actions = make([]*Action, 0)
+	for i, action := range prev {
 		fmt.Printf("\t[%d]: %v \n", i, action)
 		fmt.Printf("\t \t %v \n", replies[i])
 
@@ -97,15 +99,17 @@ func (tran *Transaction) handle(reply interface{}) {
 
 func (tran *Transaction) Exec() {
 	defer tran.conn.Close()
-
+	fmt.Printf("Trans starts executing")
 	for len(tran.Actions) > 0 {
 		tran.exec()
 
+		/*
 		next := make([]*Action, 0)
 		for _, action := range tran.Actions {
-			next = append(next, action.children...)
+			next = append(next, action.Children...)
 		}
 		tran.Actions = next
+		*/
 		fmt.Println(len(tran.Actions))
 	}
 }

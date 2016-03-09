@@ -1,5 +1,5 @@
 package gomdies
-
+/*
 import (
 	"fmt"
 	"github.com/garyburd/redigo/redis"
@@ -71,3 +71,4 @@ func printActions(actions []*Action) {
 		fmt.Printf("\t[%d]:\t%v\n", i, a)
 	}
 }
+*/

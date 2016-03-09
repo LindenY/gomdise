@@ -3,6 +3,11 @@ package gomdies
 import (
 	"reflect"
 	"testing"
+	"github.com/LindenY/gomdise/trans"
+	"github.com/garyburd/redigo/redis"
+	"time"
+	"os"
+	"fmt"
 )
 
 type tsA struct {
@@ -70,34 +75,39 @@ func MakeTsC() *tsC {
 	return tsC
 }
 
-func TestBaseStruct(t *testing.T) {
-	specA := structSpecForType(reflect.TypeOf(tsA{}))
-	if len(specA.fields) != 3 {
-		t.Fail()
+var pool *redis.Pool
+
+func TestMain(m *testing.M) {
+	pool = &redis.Pool{
+		MaxIdle:     1,
+		IdleTimeout: 3 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			conn, err := redis.Dial("tcp", "184.107.247.74:16379")
+			if err != nil {
+				return nil, err
+			}
+
+			if password := ""; len(password) > 0 {
+				if _, err := conn.Do("AUTH", password); err != nil {
+					conn.Close()
+					return nil, err
+				}
+			}
+
+			return conn, err
+		},
+		TestOnBorrow: func(conn redis.Conn, t time.Time) error {
+			_, err := conn.Do("PING")
+			return err
+		},
 	}
-	if specA.fields[0].typ != reflect.TypeOf(int(0)) {
-		t.Fail()
-	}
-	if specA.fields[1].typ != reflect.TypeOf(string("")) {
-		t.Fail()
-	}
-	if specA.fields[2].typ != reflect.TypeOf(byte(0)) {
-		t.Fail()
-	}
+	os.Exit(m.Run())
 }
 
-func TestEmbeddedStruct(t *testing.T) {
-
-}
-
-func TestNestedStruct(t *testing.T) {
-
-}
-
-func TestMultipleEmbeddedStruct(t *testing.T) {
-
-}
-
-func TestMultipleNestedStruct(t *testing.T) {
-
+func TestFindTemplateTsB(t *testing.T) {
+	tpl := tcache_find.GetTemplate(reflect.TypeOf(tsB{}))
+	tran := trans.NewTransaction(pool)
+	tpl.engrave(tran.Actions, "gomdies.tsB:0b4063db-81ae-46cc-99e3-b64863caf0ce")
+	fmt.Println(tran.Actions)
+	tran.Exec()
 }

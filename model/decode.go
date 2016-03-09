@@ -2,11 +2,14 @@ package gomdies
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"reflect"
 	"strconv"
 	"sync"
+	"github.com/garyburd/redigo/redis"
+	"github.com/LindenY/gomdise/trans"
 )
+
+type RMNode trans.RMNode
 
 func Decode(node RMNode, dest interface{}) {
 	v := reflect.ValueOf(dest)
@@ -154,7 +157,7 @@ func newMapDecoder(t reflect.Type) decodeFunc {
 }
 
 type structDecoder struct {
-	spec      *structSpec
+	spec      *StructSpec
 	elemFuncs []decodeFunc
 }
 
@@ -169,7 +172,7 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 	size := len(values) / 2
 
 	for i := 0; i < size; i++ {
-		fldVal := srtDec.spec.fields[i].valueOf(v)
+		fldVal := srtDec.spec.Fields[i].valueOf(v)
 		if i < node.Size() {
 			srtDec.elemFuncs[i](node.Child(i), values[i*2+1], fldVal)
 		} else {
@@ -179,14 +182,14 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 }
 
 func newStructDecoder(t reflect.Type) decodeFunc {
-	srtSpec := structSpecForType(t)
+	srtSpec := StructSpecForType(t)
 	srtDec := &structDecoder{
 		spec:      srtSpec,
-		elemFuncs: make([]decodeFunc, len(srtSpec.fields)),
+		elemFuncs: make([]decodeFunc, len(srtSpec.Fields)),
 	}
 
-	for i, fld := range srtSpec.fields {
-		srtDec.elemFuncs[i] = decoderForType(fld.typ)
+	for i, fld := range srtSpec.Fields {
+		srtDec.elemFuncs[i] = decoderForType(fld.Typ)
 	}
 	return srtDec.decode
 }

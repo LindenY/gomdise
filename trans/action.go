@@ -1,4 +1,4 @@
-package gomdies
+package trans
 
 import (
 	"fmt"
@@ -23,12 +23,14 @@ func (action *Action) handle(trans *Transaction, reply interface{}) {
 	}
 }
 
-func (action *Action) addChild(child *Action) {
-	if child == nil {
+func (action *Action) AddChildren(children ...*Action) {
+	if children == nil {
 		return
 	}
-	child.parent = action
-	action.children = append(action.children, child)
+	for _, child := range children {
+		action.children = append(action.children, child)
+		child.parent = action
+	}
 }
 
 func (action *Action) Parent() RMNode {
