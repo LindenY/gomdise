@@ -10,7 +10,7 @@ import (
  *
  */
 type ActionTemplate interface {
-	engrave(actions []*trans.Action, args ...interface{})
+	engrave(actions *[]*trans.Action, args ...interface{})
 }
 
 /*
@@ -76,7 +76,7 @@ type proxyTemplate struct {
 /*
  *
  */
-func (pt *proxyTemplate) engrave(actions []*trans.Action, args ...interface{}) {
+func (pt *proxyTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
 	pt.wg.Wait()
 	pt.dest.engrave(actions, args...)
 }
