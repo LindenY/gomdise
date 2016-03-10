@@ -95,6 +95,6 @@ func (ust *unsupportedTypeTemplate) engrave(actions *[]*trans.Action, args ...in
 	panic(errors.New(fmt.Sprintf("Operation[%s] does not support for type: %v \n", ust.op, ust.typ)))
 }
 
-func newUnsupportedTypeTemplate(t reflect.Type, op string) {
+func newUnsupportedTypeTemplate(t reflect.Type, op string) *unsupportedTypeTemplate {
 	return &unsupportedTypeTemplate{t, op}
 }

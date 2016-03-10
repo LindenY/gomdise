@@ -51,7 +51,7 @@ func (ast *arraySaveTemplate) engrave(actions *[]*trans.Action, args ...interfac
 	n := v.Len()
 	for i := 0; i < n; i ++ {
 		eKey := mdl.NewKey(v.Index(i))
-		if eKey != nil {
+		if eKey != "" {
 			action.Args = action.Args.Add(eKey)
 		}
 		ast.elemTpl.engrave(actions, eKey, v.Index(i))
@@ -75,14 +75,14 @@ func (mst *mapSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{
 		Name:"HMSET",
 		Args:redis.Args{args[0]},
 	}
-	*action = append(*actions, action)
+	*actions = append(*actions, action)
 
 	v := args[1].(reflect.Value)
 	mKey := v.MapKeys()
 	for _, mKey := range mKey {
 		action.Args = action.Args.Add(mKey)
 		mVal := mdl.NewKey(v.MapIndex(mKey))
-		if mVal != nil {
+		if mVal != "" {
 			action.Args = action.Args.Add(mVal)
 		}
 		mst.elemTpl.engrave(actions, mVal, v.MapIndex(mKey))
@@ -98,7 +98,7 @@ func newMapSaveTemplate(t reflect.Type) *mapSaveTemplate {
  *
  */
 type structSaveTemplate struct {
-	spec mdl.StructSpec
+	spec *mdl.StructSpec
 	elemTpls []ActionTemplate
 }
 
@@ -114,7 +114,7 @@ func (sst *structSaveTemplate) engrave(actions *[]*trans.Action, args ...interfa
 		action.Args = action.Args.Add(fld.Name)
 		fVal := fld.ValueOf(v)
 		fKey := mdl.NewKey(fVal)
-		if fKey != nil {
+		if fKey != "" {
 			action.Args = action.Args.Add(fKey)
 		}
 		sst.elemTpls[i].engrave(actions, fKey, fVal)
@@ -145,7 +145,7 @@ func (pst *pointerSaveTemplate) engrave(actions *[]*trans.Action, args ...interf
 	pst.engrave(actions, args[0], v.Elem())
 }
 
-func newPointerSaveTemplate(t reflect.Type) {
+func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {
 	pst := &pointerSaveTemplate{TCSave.GetTemplate(t.Elem())}
 	return pst
 }
