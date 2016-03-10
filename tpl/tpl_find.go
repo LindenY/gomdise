@@ -33,7 +33,7 @@ func newFindTemplateForType(t reflect.Type) ActionTemplate {
 	case reflect.Ptr:
 		return newPointerFindTemplate(t)
 	default:
-		return nil
+		return newUnsupportedTypeTemplate(t, "Find")
 	}
 }
 
@@ -210,22 +210,11 @@ func (vft *voidFindTemplate) handle(tran *trans.Transaction, action *trans.Actio
 func (vft *voidFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
 }
 
-var vft *voidFindTemplate
+var _vft *voidFindTemplate
 
 func newVoidFindTemplate(t reflect.Type) *voidFindTemplate {
-	if vft == nil {
-		vft = &voidFindTemplate{}
+	if _vft == nil {
+		_vft = &voidFindTemplate{}
 	}
-	return vft
+	return _vft
 }
-
-/*
-type UnsupportArgsError struct {
-	Msg  string
-	Args interface{}
-}
-
-func (uaerr UnsupportArgsError) Error() string {
-	return fmt.Sprintf("[%v]\t%s", uaerr.Args, uaerr.Msg)
-}
-*/

@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"sync"
 	"github.com/LindenY/gomdise/trans"
+	"errors"
+	"fmt"
 )
 
 /*
@@ -79,4 +81,20 @@ type proxyTemplate struct {
 func (pt *proxyTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
 	pt.wg.Wait()
 	pt.dest.engrave(actions, args...)
+}
+
+/*
+ *
+ */
+type unsupportedTypeTemplate struct {
+	typ reflect.Type
+	op string
+}
+
+func (ust *unsupportedTypeTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+	panic(errors.New(fmt.Sprintf("Operation[%s] does not support for type: %v \n", ust.op, ust.typ)))
+}
+
+func newUnsupportedTypeTemplate(t reflect.Type, op string) {
+	return &unsupportedTypeTemplate{t, op}
 }
