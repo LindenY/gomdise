@@ -172,7 +172,7 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 	size := len(values) / 2
 
 	for i := 0; i < size; i++ {
-		fldVal := srtDec.spec.Fields[i].valueOf(v)
+		fldVal := srtDec.spec.Fields[i].ValueOf(v)
 		if i < node.Size() {
 			srtDec.elemFuncs[i](node.Child(i), values[i*2+1], fldVal)
 		} else {

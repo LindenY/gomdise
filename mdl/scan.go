@@ -12,7 +12,7 @@ type FieldSpec struct {
 	Typ   reflect.Type
 }
 
-func (fldSpec *FieldSpec) valueOf(v reflect.Value) reflect.Value {
+func (fldSpec *FieldSpec) ValueOf(v reflect.Value) reflect.Value {
 	retVal := v
 	for _, fldIdx := range fldSpec.Index {
 		retVal = retVal.Field(fldIdx)
