@@ -1,17 +1,17 @@
-package gomdies
+package tpl
 
 import (
 	"reflect"
 	"github.com/garyburd/redigo/redis"
 	"github.com/LindenY/gomdise/trans"
-	"github.com/LindenY/gomdise/model"
+	"github.com/LindenY/gomdise/mdl"
 	"fmt"
 )
 
-var tcache_find *TemplateCache
+var TCFind *TemplateCache
 
 func init() {
-	tcache_find = newTplCache(newFindTemplateForType)
+	TCFind = newTplCache(newFindTemplateForType)
 }
 
 
@@ -76,7 +76,7 @@ func (aft *arrayFindTemplate) engrave(actions *[]*trans.Action, args ...interfac
 
 func newArrayFindTemplate(t reflect.Type) *arrayFindTemplate {
 	aft := &arrayFindTemplate{
-		elemTpl: tcache_find.GetTemplate(t.Elem()),
+		elemTpl: TCFind.GetTemplate(t.Elem()),
 	}
 	return aft
 }
@@ -126,7 +126,7 @@ func (mft *mapFindTemplate) engrave(actions *[]*trans.Action, args ...interface{
 
 func newMapFindTemplate(t reflect.Type) *mapFindTemplate {
 	mft := &mapFindTemplate{
-		elemTpl: tcache_find.GetTemplate(t.Elem()),
+		elemTpl: TCFind.GetTemplate(t.Elem()),
 	}
 	return mft
 }
@@ -135,7 +135,7 @@ func newMapFindTemplate(t reflect.Type) *mapFindTemplate {
  *
  */
 type structFindTemplate struct {
-	spec    *gomdies.StructSpec
+	spec    *mdl.StructSpec
 	elemTpl []ActionTemplate
 }
 
@@ -176,14 +176,14 @@ func (sft *structFindTemplate) engrave(actions *[]*trans.Action, args ...interfa
 }
 
 func newStructFindTemplate(t reflect.Type) *structFindTemplate {
-	srtSpec := gomdies.StructSpecForType(t)
+	srtSpec := mdl.StructSpecForType(t)
 	sft := &structFindTemplate{
 		spec:     srtSpec,
 		elemTpl: make([]ActionTemplate, len(srtSpec.Fields)),
 	}
 
 	for i, fldSpec := range sft.spec.Fields {
-		sft.elemTpl[i] = tcache_find.GetTemplate(fldSpec.Typ)
+		sft.elemTpl[i] = TCFind.GetTemplate(fldSpec.Typ)
 	}
 	return sft
 }
@@ -197,7 +197,7 @@ func (pft *pointerFindTemplate) engrave(actions *[]*trans.Action, args ...interf
 }
 
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {
-	pft := &pointerFindTemplate{tcache_find.GetTemplate(t.Elem())}
+	pft := &pointerFindTemplate{TCFind.GetTemplate(t.Elem())}
 	return pft
 }
 

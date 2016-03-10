@@ -1,4 +1,4 @@
-package gomdies
+package mdl
 
 type Model interface {
 	GetModelId() string

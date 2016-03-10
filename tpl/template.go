@@ -1,4 +1,4 @@
-package gomdies
+package tpl
 
 import (
 	"reflect"
