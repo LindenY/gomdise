@@ -1,10 +1,12 @@
 package tpl
 
 import (
-	"reflect"
-	"github.com/garyburd/redigo/redis"
+	"errors"
+	"fmt"
 	"github.com/LindenY/gomdise/mdl"
 	"github.com/LindenY/gomdise/trans"
+	"github.com/garyburd/redigo/redis"
+	"reflect"
 )
 
 var TCSave *TemplateCache
@@ -41,20 +43,24 @@ type arraySaveTemplate struct {
 }
 
 func (ast *arraySaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	action := &trans.Action {
-		Name:"RPUSH",
-		Args:redis.Args{args[0]},
+	action := &trans.Action{
+		Name: "RPUSH",
+		Args: redis.Args{args[0]},
 	}
 	*actions = append(*actions, action)
 
 	v := args[1].(reflect.Value)
 	n := v.Len()
-	for i := 0; i < n; i ++ {
+	for i := 0; i < n; i++ {
 		eKey := mdl.NewKey(v.Index(i))
 		if eKey != "" {
 			action.Args = action.Args.Add(eKey)
 		}
 		ast.elemTpl.Engrave(actions, eKey, v.Index(i))
+	}
+
+	action.Handler = func(tran *trans.Transaction, action *trans.Action, reply interface{}) {
+		numbericReplyValidator(action, n, reply)
 	}
 }
 
@@ -71,9 +77,9 @@ type mapSaveTemplate struct {
 }
 
 func (mst *mapSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	action := &trans.Action {
-		Name:"HMSET",
-		Args:redis.Args{args[0]},
+	action := &trans.Action{
+		Name: "HMSET",
+		Args: redis.Args{args[0]},
 	}
 	*actions = append(*actions, action)
 
@@ -87,6 +93,10 @@ func (mst *mapSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{
 		}
 		mst.elemTpl.Engrave(actions, mVal, v.MapIndex(mKey))
 	}
+
+	action.Handler = func(tran *trans.Transaction, action *trans.Action, reply interface{}) {
+		stringReplyValidator(action, "OK", reply)
+	}
 }
 
 func newMapSaveTemplate(t reflect.Type) *mapSaveTemplate {
@@ -98,14 +108,14 @@ func newMapSaveTemplate(t reflect.Type) *mapSaveTemplate {
  *
  */
 type structSaveTemplate struct {
-	spec *mdl.StructSpec
+	spec     *mdl.StructSpec
 	elemTpls []ActionTemplate
 }
 
 func (sst *structSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	action := &trans.Action {
-		Name:"HMSET",
-		Args:redis.Args{args[0]},
+	action := &trans.Action{
+		Name: "HMSET",
+		Args: redis.Args{args[0]},
 	}
 	*actions = append(*actions, action)
 
@@ -119,13 +129,17 @@ func (sst *structSaveTemplate) Engrave(actions *[]*trans.Action, args ...interfa
 		}
 		sst.elemTpls[i].Engrave(actions, fKey, fVal)
 	}
+
+	action.Handler = func(tran *trans.Transaction, action *trans.Action, reply interface{}) {
+		stringReplyValidator(action, "OK", reply)
+	}
 }
 
 func newStructSaveTemplate(t reflect.Type) *structSaveTemplate {
 	spec := mdl.StructSpecForType(t)
 	sst := &structSaveTemplate{
-		spec: spec,
-		elemTpls:make([]ActionTemplate, len(spec.Fields)),
+		spec:     spec,
+		elemTpls: make([]ActionTemplate, len(spec.Fields)),
 	}
 	for i, fld := range sst.spec.Fields {
 		sst.elemTpls[i] = TCSave.GetTemplate(fld.Typ)
@@ -142,7 +156,6 @@ type pointerSaveTemplate struct {
 
 func (pst *pointerSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	v := args[1].(reflect.Value)
-
 	pst.elemFunc.Engrave(actions, args[0], v.Elem())
 }
 
@@ -154,10 +167,23 @@ func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {
 /*
  *
  */
-type primitiveSaveTemplate struct {}
+type primitiveSaveTemplate struct{}
+
 var _prtst *primitiveSaveTemplate
 
 func (pst *primitiveSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	action := (*actions)[len(*actions) - 1]
+	action := (*actions)[len(*actions)-1]
 	action.Args = action.Args.Add(args[1].(reflect.Value).Interface())
+}
+
+func numbericReplyValidator(action *trans.Action, ept int, reply interface{}) {
+	if rpy, _ := redis.Int(reply, nil); rpy != ept {
+		panic(errors.New(fmt.Sprintf("Numberic Reply Error: action[%v] is expecting %d but receviced %v", action, ept, reply)))
+	}
+}
+
+func stringReplyValidator(action *trans.Action, ept string, reply interface{}) {
+	if rpy, _ := reply.(string); rpy != ept {
+		panic(errors.New(fmt.Sprintf("String Reply Error: action[%v] is expecting %s but receviced %v", action, ept, reply)))
+	}
 }
