@@ -51,7 +51,7 @@ func (aft *arrayFindTemplate) handle(tran *trans.Transaction, action *trans.Acti
 	}
 	for _, rpy := range replies {
 		newAs := make([]*trans.Action, 0, 1)
-		aft.elemTpl.engrave(&newAs, rpy)
+		aft.elemTpl.Engrave(&newAs, rpy)
 		action.AddChildren(newAs...)
 		tran.Actions = append(tran.Actions, newAs...)
 	}
@@ -102,7 +102,7 @@ func (mft *mapFindTemplate) handle(tran *trans.Transaction, action *trans.Action
 		}
 
 		newAs := make([]*trans.Action, 0, 1)
-		mft.elemTpl.engrave(&newAs, rpy)
+		mft.elemTpl.Engrave(&newAs, rpy)
 		action.AddChildren(newAs...)
 		tran.Actions = append(tran.Actions, newAs...)
 	}
@@ -151,7 +151,7 @@ func (sft *structFindTemplate) handle(tran *trans.Transaction, action *trans.Act
 			continue
 		}
 		newAs := make([]*trans.Action, 0, 1)
-		sft.elemTpl[(i-1)/2].engrave(&newAs, rpy)
+		sft.elemTpl[(i-1)/2].Engrave(&newAs, rpy)
 		action.AddChildren(newAs...)
 		tran.Actions = append(tran.Actions, newAs...)
 	}
@@ -193,7 +193,7 @@ type pointerFindTemplate struct {
 }
 
 func (pft *pointerFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
-	pft.elemTpl.engrave(actions, args)
+	pft.elemTpl.Engrave(actions, args)
 }
 
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {

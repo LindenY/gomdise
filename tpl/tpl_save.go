@@ -55,7 +55,7 @@ func (ast *arraySaveTemplate) engrave(actions *[]*trans.Action, args ...interfac
 		if eKey != "" {
 			action.Args = action.Args.Add(eKey)
 		}
-		ast.elemTpl.engrave(actions, eKey, v.Index(i))
+		ast.elemTpl.Engrave(actions, eKey, v.Index(i))
 	}
 }
 
@@ -86,7 +86,7 @@ func (mst *mapSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{
 		if mVal != "" {
 			action.Args = action.Args.Add(mVal)
 		}
-		mst.elemTpl.engrave(actions, mVal, v.MapIndex(mKey))
+		mst.elemTpl.Engrave(actions, mVal, v.MapIndex(mKey))
 	}
 }
 
@@ -118,7 +118,7 @@ func (sst *structSaveTemplate) engrave(actions *[]*trans.Action, args ...interfa
 		if fKey != "" {
 			action.Args = action.Args.Add(fKey)
 		}
-		sst.elemTpls[i].engrave(actions, fKey, fVal)
+		sst.elemTpls[i].Engrave(actions, fKey, fVal)
 	}
 }
 
@@ -145,7 +145,7 @@ func (pst *pointerSaveTemplate) engrave(actions *[]*trans.Action, args ...interf
 	fmt.Printf("%v \n", args)
 	v := args[1].(reflect.Value)
 
-	pst.elemFunc.engrave(actions, args[0], v.Elem())
+	pst.elemFunc.Engrave(actions, args[0], v.Elem())
 }
 
 func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {

@@ -12,7 +12,7 @@ func TestSaveTemplateTsB(t *testing.T) {
 	tsB := MakeTsB()
 	tpl := TCSave.GetTemplate(reflect.TypeOf(tsB))
 	trans := trans.NewTransaction(pool)
-	tpl.engrave(&trans.Actions, mdl.NewKey(reflect.ValueOf(tsB)), reflect.ValueOf(tsB))
+	tpl.Engrave(&trans.Actions, mdl.NewKey(reflect.ValueOf(tsB)), reflect.ValueOf(tsB))
 
 	printActions(trans.Actions)
 	trans.Exec()
