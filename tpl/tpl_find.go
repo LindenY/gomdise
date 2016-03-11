@@ -57,7 +57,7 @@ func (aft *arrayFindTemplate) handle(tran *trans.Transaction, action *trans.Acti
 	}
 }
 
-func (aft *arrayFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}){
+func (aft *arrayFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}){
 	key, ok := args[0].(string)
 	if !ok {
 		_, err := redis.Scan(args, &key)
@@ -108,7 +108,7 @@ func (mft *mapFindTemplate) handle(tran *trans.Transaction, action *trans.Action
 	}
 }
 
-func (mft *mapFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (mft *mapFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	key, ok := args[0].(string)
 	if !ok {
 		_, err := redis.Scan(args, &key)
@@ -157,7 +157,8 @@ func (sft *structFindTemplate) handle(tran *trans.Transaction, action *trans.Act
 	}
 }
 
-func (sft *structFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (sft *structFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
+	fmt.Printf("%v \n", args)
 	key, ok := args[0].(string)
 	if !ok {
 		_, err := redis.Scan(args, &key)
@@ -192,8 +193,8 @@ type pointerFindTemplate struct {
 	elemTpl ActionTemplate
 }
 
-func (pft *pointerFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
-	pft.elemTpl.Engrave(actions, args)
+func (pft *pointerFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
+	pft.elemTpl.Engrave(actions, args...)
 }
 
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {
@@ -207,7 +208,7 @@ type voidFindTemplate struct {
 func (vft *voidFindTemplate) handle(tran *trans.Transaction, action *trans.Action, reply interface{}) {
 }
 
-func (vft *voidFindTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (vft *voidFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 }
 
 var _vft *voidFindTemplate

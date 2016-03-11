@@ -41,7 +41,7 @@ type arraySaveTemplate struct {
 	elemTpl ActionTemplate
 }
 
-func (ast *arraySaveTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (ast *arraySaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := &trans.Action {
 		Name:"RPUSH",
 		Args:redis.Args{args[0]},
@@ -71,7 +71,7 @@ type mapSaveTemplate struct {
 	elemTpl ActionTemplate
 }
 
-func (mst *mapSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (mst *mapSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := &trans.Action {
 		Name:"HMSET",
 		Args:redis.Args{args[0]},
@@ -103,7 +103,7 @@ type structSaveTemplate struct {
 	elemTpls []ActionTemplate
 }
 
-func (sst *structSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (sst *structSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := &trans.Action {
 		Name:"HMSET",
 		Args:redis.Args{args[0]},
@@ -141,7 +141,7 @@ type pointerSaveTemplate struct {
 	elemFunc ActionTemplate
 }
 
-func (pst *pointerSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (pst *pointerSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	fmt.Printf("%v \n", args)
 	v := args[1].(reflect.Value)
 
@@ -159,7 +159,7 @@ func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {
 type primitiveSaveTemplate struct {}
 var _prtst *primitiveSaveTemplate
 
-func (pst *primitiveSaveTemplate) engrave(actions *[]*trans.Action, args ...interface{}) {
+func (pst *primitiveSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := (*actions)[len(*actions) - 1]
 	action.Args = action.Args.Add(args[1].(reflect.Value).Interface())
 }
