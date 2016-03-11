@@ -1,14 +1,13 @@
 package trans
 
 import (
-	"fmt"
 	"github.com/garyburd/redigo/redis"
+	"log"
 )
 
 type Transaction struct {
 	conn    redis.Conn
 	Actions []*Action
-	Err     error
 }
 
 func NewTransaction(pool *redis.Pool) *Transaction {
@@ -32,19 +31,13 @@ func (tran *Transaction) popAction() *Action {
 	return ret
 }
 
-func (tran *Transaction) setError(err error) {
-	if tran.Err == nil {
-		tran.Err = err
-	}
-}
-
 func (tran *Transaction) sendAction(action *Action) error {
-	fmt.Printf("send action: %v \n", action)
+	log.Printf("Transaction: sending action %v \n", action)
 	return tran.conn.Send(action.Name, action.Args...)
 }
 
 func (tran *Transaction) doAction(action *Action) (interface{}, error) {
-	fmt.Printf("do action: %v \n", action)
+	log.Printf("Transaction: doing action %v \n", action)
 	return tran.conn.Do(action.Name, action.Args...)
 }
 
@@ -85,12 +78,10 @@ func (tran *Transaction) handle(reply interface{}) {
 		}
 	}
 
-	fmt.Printf("Num Action:%d, Num Replies:%d \n", len(tran.Actions), len(replies))
 	prev := tran.Actions
 	tran.Actions = make([]*Action, 0)
 	for i, action := range prev {
-		fmt.Printf("\t[%d]: %v \n", i, action)
-		fmt.Printf("\t \t %v \n", replies[i])
+		log.Printf("Transaction: receive reply [%v] for action [%v]\n", replies[i], action)
 
 		action.Reply = replies[i]
 		action.handle(tran, replies[i])
@@ -99,17 +90,9 @@ func (tran *Transaction) handle(reply interface{}) {
 
 func (tran *Transaction) Exec() {
 	defer tran.conn.Close()
-	fmt.Printf("Trans starts executing")
 	for len(tran.Actions) > 0 {
+		log.Printf("Transaction: >>>\t executing transaction with %d actions \n", len(tran.Actions))
 		tran.exec()
-
-		/*
-		next := make([]*Action, 0)
-		for _, action := range tran.Actions {
-			next = append(next, action.Children...)
-		}
-		tran.Actions = next
-		*/
-		fmt.Println(len(tran.Actions))
+		log.Printf("Transaction: >>>\t executed transaction")
 	}
 }

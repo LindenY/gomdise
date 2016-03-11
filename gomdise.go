@@ -23,10 +23,11 @@ func (gom *Gomdise) SetOption(key string, val interface{}) {
 	gom.opts[key] = val
 }
 
-func (gom *Gomdise) GetOption(key string) interface{} {
+func (gom *Gomdise) GetOption(key string) (interface{}, bool) {
 	gom.RLock()
 	defer gom.RUnlock()
-	return gom.opts[key]
+	val, ok := gom.opts[key]
+	return val, ok
 }
 
 

@@ -5,7 +5,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/LindenY/gomdise/mdl"
 	"github.com/LindenY/gomdise/trans"
-	"fmt"
 )
 
 var TCSave *TemplateCache
@@ -142,7 +141,6 @@ type pointerSaveTemplate struct {
 }
 
 func (pst *pointerSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	fmt.Printf("%v \n", args)
 	v := args[1].(reflect.Value)
 
 	pst.elemFunc.Engrave(actions, args[0], v.Elem())

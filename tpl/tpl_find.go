@@ -5,7 +5,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/LindenY/gomdise/trans"
 	"github.com/LindenY/gomdise/mdl"
-	"fmt"
 )
 
 var TCFind *TemplateCache
@@ -16,9 +15,6 @@ func init() {
 
 
 func newFindTemplateForType(t reflect.Type) ActionTemplate {
-
-	fmt.Printf("new tpl for type: %v \n", t)
-
 	switch t.Kind() {
 	case reflect.Bool, reflect.String, reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -158,7 +154,6 @@ func (sft *structFindTemplate) handle(tran *trans.Transaction, action *trans.Act
 }
 
 func (sft *structFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-	fmt.Printf("%v \n", args)
 	key, ok := args[0].(string)
 	if !ok {
 		_, err := redis.Scan(args, &key)
@@ -172,7 +167,6 @@ func (sft *structFindTemplate) Engrave(actions *[]*trans.Action, args ...interfa
 		Args:    redis.Args{key},
 		Handler: sft.handle,
 	}
-	fmt.Printf("appending actions \n")
 	*actions = append(*actions, action)
 }
 

@@ -5,8 +5,6 @@ import (
 	"time"
 	"os"
 	"github.com/garyburd/redigo/redis"
-	"fmt"
-	"reflect"
 )
 
 
@@ -123,9 +121,6 @@ func TestFind(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("%v \n", key)
-	fmt.Printf("%v \n", reflect.TypeOf(key))
 	gom.Find(key, dest_tsB)
 }
 
