@@ -19,4 +19,4 @@ gomdies is a simple orm alike library aiming to provide complex data structure s
 
 
 ###Sample usage
-    For the example of how to use gomdise, see the [test file](https://github.com/LindenY/gomdise/blob/v0.0.1-SNAPSHOT/gomdise_test.go) for more details.
+    For the example of how to use gomdise, see the (test file)[https://github.com/LindenY/gomdise/blob/v0.0.1-SNAPSHOT/gomdise_test.go] for more details.
