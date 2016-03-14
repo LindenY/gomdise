@@ -2,13 +2,13 @@ package gomdies
 
 import (
 	"errors"
-	"github.com/LindenY/gomdies/mdl"
-	"github.com/LindenY/gomdies/tpl"
-	"github.com/LindenY/gomdies/trans"
-	"github.com/garyburd/redigo/redis"
 	"reflect"
 	"runtime"
 	"sync"
+	"github.com/garyburd/redigo/redis"
+	"github.com/LindenY/gomdise/mdl"
+	"github.com/LindenY/gomdise/tpl"
+	"github.com/LindenY/gomdise/trans"
 )
 
 type Gomdise struct {

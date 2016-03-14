@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 	"github.com/garyburd/redigo/redis"
-	"github.com/LindenY/gomdies/trans"
+	"github.com/LindenY/gomdise/trans"
 )
 
 type RMNode trans.RMNode

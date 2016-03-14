@@ -5,7 +5,7 @@ import (
 	"sync"
 	"errors"
 	"fmt"
-	"github.com/LindenY/gomdies/trans"
+	"github.com/LindenY/gomdise/trans"
 )
 
 /*
