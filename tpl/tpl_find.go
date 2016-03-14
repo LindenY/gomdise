@@ -3,8 +3,8 @@ package tpl
 import (
 	"reflect"
 	"github.com/garyburd/redigo/redis"
-	"github.com/LindenY/gomdies/trans"
-	"github.com/LindenY/gomdies/mdl"
+	"github.com/LindenY/gomdise/trans"
+	"github.com/LindenY/gomdise/mdl"
 )
 
 var TCFind *TemplateCache

@@ -11,9 +11,14 @@ var (
 )
 
 func NewKey(val reflect.Value) string {
-	if val.Type().Implements(modelType) {
-		model := val.Interface().(Model)
-		return model.GetModelId()
+
+	fmt.Printf("%v implements model: %v \n", val, IfImplementsModel(val.Type()))
+
+	if IfImplementsModel(val.Type()) && val.CanAddr() {
+
+		fmt.Printf("%v implements model \n", val)
+
+		return ValueGetModelId(val)
 	}
 
 	switch val.Kind() {
