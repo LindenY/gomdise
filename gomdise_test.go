@@ -1,4 +1,4 @@
-package gomdies
+package gomdise
 
 import (
 	"github.com/garyburd/redigo/redis"

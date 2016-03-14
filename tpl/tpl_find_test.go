@@ -10,7 +10,7 @@ import (
 func TestFindTemplateTsB(t *testing.T) {
 	tpl := TCFind.GetTemplate(reflect.TypeOf(tsB{}))
 	tran := trans.NewTransaction(pool)
-	tpl.Engrave(&tran.Actions, "gomdies.tsB:0b4063db-81ae-46cc-99e3-b64863caf0ce")
+	tpl.Engrave(&tran.Actions, "gomdise.tsB:0b4063db-81ae-46cc-99e3-b64863caf0ce")
 	fmt.Println(tran.Actions)
 	tran.Exec()
 }
