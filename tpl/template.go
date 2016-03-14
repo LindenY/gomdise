@@ -3,9 +3,9 @@ package tpl
 import (
 	"reflect"
 	"sync"
-	"github.com/LindenY/gomdise/trans"
 	"errors"
 	"fmt"
+	"github.com/LindenY/gomdies/trans"
 )
 
 /*
