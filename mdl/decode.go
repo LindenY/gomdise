@@ -62,26 +62,33 @@ func newValueForType(t reflect.Type) reflect.Value {
 }
 
 func newTypeDecoder(t reflect.Type) decodeFunc {
+	var decoder decodeFunc
+
 	switch t.Kind() {
 	case reflect.Bool:
-		return booleanDecoder
+		decoder = booleanDecoder
 	case reflect.String:
-		return stringDecoder
+		decoder = stringDecoder
 	case reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return numberDecoder
+		decoder = numberDecoder
 	case reflect.Map:
-		return newMapDecoder(t)
+		decoder = newMapDecoder(t)
 	case reflect.Array, reflect.Slice:
-		return newArrayDecoder(t)
+		decoder = newArrayDecoder(t)
 	case reflect.Struct:
-		return newStructDecoder(t)
+		decoder = newStructDecoder(t)
 	case reflect.Ptr:
-		return newPointerDecoder(t)
+		decoder = newPointerDecoder(t)
 	default:
 		return unsupportedTypeDecoder
 	}
+
+	if IfImplementsModel(t) {
+		decoder = newModelDecoder(decoder)
+	}
+	return decoder
 }
 
 type arrayDecoder struct {
@@ -205,6 +212,27 @@ func (ptrDec *pointerDecoder) decode(node RMNode, data interface{}, v reflect.Va
 func newPointerDecoder(t reflect.Type) decodeFunc {
 	ptrDec := &pointerDecoder{decoderForType(t.Elem())}
 	return ptrDec.decode
+}
+
+type modelDecoder struct {
+	elemFunc decodeFunc
+}
+
+func (mdlDec *modelDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+
+	fmt.Printf("decode data: %v \n", data)
+	key, err := redis.String(data, nil)
+	if err != nil {
+		panic(err)
+	} else if key != "" && v.CanAddr() {
+		ValueSetModelId(v, key)
+	}
+	mdlDec.elemFunc(node, data, v)
+}
+
+func newModelDecoder(dec decodeFunc) decodeFunc {
+	mdlDec := &modelDecoder{dec}
+	return mdlDec.decode
 }
 
 func booleanDecoder(node RMNode, data interface{}, v reflect.Value) {

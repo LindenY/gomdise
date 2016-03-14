@@ -1,20 +1,35 @@
 package gomdies
 
 import (
+	"github.com/garyburd/redigo/redis"
+	"os"
 	"testing"
 	"time"
-	"os"
-	"github.com/garyburd/redigo/redis"
+	"strings"
+	"fmt"
+	"github.com/LindenY/gomdise/mdl"
+	"reflect"
 )
-
 
 /*
  * TODO: factor out common testing code for all packages
  */
 type tsA struct {
-	IntVal int
-	StrVal string
-	BytVal byte
+	id string
+
+	IntVal  int
+	StrVal  string
+	BytVal  byte
+	BoolVal bool
+}
+
+func (ts *tsA) GetModelId() string {
+	return "gomdise:test_struct:A" + ts.id
+}
+
+func (ts *tsA) SetModelId(key string) {
+	lastIdx := strings.LastIndex(key, ":")
+	ts.id = key[lastIdx:]
 }
 
 type tsB struct {
@@ -39,9 +54,11 @@ type tsE struct {
 
 func MakeTsA() *tsA {
 	return &tsA{
+		"0",
 		10,
 		"tsA",
 		0x55,
+		true,
 	}
 }
 
@@ -122,5 +139,7 @@ func TestFind(t *testing.T) {
 		panic(err)
 	}
 	gom.Find(key, dest_tsB)
-}
 
+	fmt.Printf("%v \n", mdl.IfImplementsModel(reflect.TypeOf(MakeTsA())))
+	fmt.Printf("%v \n", dest_tsB)
+}
