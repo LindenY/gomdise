@@ -1,12 +1,12 @@
 package tpl
 
 import (
+	"reflect"
 	"errors"
 	"fmt"
-	"github.com/LindenY/gomdise/mdl"
-	"github.com/LindenY/gomdise/trans"
 	"github.com/garyburd/redigo/redis"
-	"reflect"
+	"github.com/LindenY/gomdies/mdl"
+	"github.com/LindenY/gomdies/trans"
 )
 
 var TCSave *TemplateCache

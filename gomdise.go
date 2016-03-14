@@ -1,14 +1,14 @@
 package gomdies
 
 import (
-	"sync"
-	"runtime"
 	"errors"
-	"reflect"
+	"github.com/LindenY/gomdies/mdl"
+	"github.com/LindenY/gomdies/tpl"
+	"github.com/LindenY/gomdies/trans"
 	"github.com/garyburd/redigo/redis"
-	"github.com/LindenY/gomdise/tpl"
-	"github.com/LindenY/gomdise/trans"
-	"github.com/LindenY/gomdise/mdl"
+	"reflect"
+	"runtime"
+	"sync"
 )
 
 type Gomdise struct {
@@ -30,7 +30,6 @@ func (gom *Gomdise) GetOption(key string) (interface{}, bool) {
 	return val, ok
 }
 
-
 func (gom *Gomdise) Save(arg interface{}) (key string, err error) {
 	defer func() {
 		err = errorRecover()
@@ -48,6 +47,18 @@ func (gom *Gomdise) Save(arg interface{}) (key string, err error) {
 	return key, nil
 }
 
+func (gom *Gomdise) SaveWithKey(arg interface{}, key string) (err error) {
+	defer func() {
+		err = errorRecover()
+	}()
+	tpl := tpl.TCSave.GetTemplate(reflect.TypeOf(arg))
+	tran := trans.NewTransaction(gom.pool)
+	v := reflect.ValueOf(arg)
+	tpl.Engrave(&tran.Actions, key, v)
+	tran.Exec()
+	return nil
+}
+
 func (gom *Gomdise) Find(key string, dest interface{}) (err error) {
 	defer func() {
 		err = errorRecover()
@@ -62,15 +73,13 @@ func (gom *Gomdise) Find(key string, dest interface{}) (err error) {
 	return nil
 }
 
-
 func New(pool *redis.Pool) *Gomdise {
 	gom := &Gomdise{
-		pool:pool,
-		opts:make(map[string]interface{}, 0),
+		pool: pool,
+		opts: make(map[string]interface{}, 0),
 	}
 	return gom
 }
-
 
 func errorRecover() (err error) {
 	if r := recover(); r != nil {
