@@ -1,4 +1,4 @@
-package gomdies
+package gomdise
 
 import (
 	"errors"
