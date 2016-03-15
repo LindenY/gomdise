@@ -27,8 +27,8 @@ func (ts *tsA) GetModelId() string {
 }
 
 func (ts *tsA) SetModelId(key string) {
-	lastIdx := strings.LastIndex(key, ":")
-	ts.id = key[lastIdx:]
+	lastIdx := strings.LastIndex(key, "A")
+	ts.id = key[lastIdx+1:]
 }
 
 type tsB struct {

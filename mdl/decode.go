@@ -2,11 +2,11 @@ package mdl
 
 import (
 	"fmt"
+	"github.com/LindenY/gomdise/trans"
+	"github.com/garyburd/redigo/redis"
 	"reflect"
 	"strconv"
 	"sync"
-	"github.com/garyburd/redigo/redis"
-	"github.com/LindenY/gomdise/trans"
 )
 
 type RMNode trans.RMNode
@@ -53,14 +53,9 @@ func decoderForType(t reflect.Type) decodeFunc {
 }
 
 func newValueForType(t reflect.Type) reflect.Value {
-	fmt.Printf("new value for type: %v \n", t)
 	switch t.Kind() {
-	case reflect.Struct:
+	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
 		return reflect.New(t).Elem()
-	case reflect.Map:
-		return reflect.MakeMap(t)
-	case reflect.Slice:
-		return reflect.MakeSlice(t, 0, 0)
 	case reflect.Ptr:
 		return reflect.New(t.Elem())
 	default:
@@ -70,7 +65,6 @@ func newValueForType(t reflect.Type) reflect.Value {
 
 func newTypeDecoder(t reflect.Type) decodeFunc {
 	var decoder decodeFunc
-
 	switch t.Kind() {
 	case reflect.Bool:
 		decoder = booleanDecoder
@@ -107,16 +101,8 @@ func (arrDec *arrayDecoder) decode(node RMNode, data interface{}, v reflect.Valu
 	if err != nil {
 		panic(err)
 	}
-
-	//base := v.Len()
 	size := len(values)
-	//newV := reflect.MakeSlice(v.Type(), base+size, base+size)
-	//reflect.Copy(newV, v)
-	//v.Set(newV)
-	if v.IsNil() && v.CanSet() {
-		v.Set(reflect.MakeSlice(v.Type(), size, size))
-	}
-
+	v.Set(reflect.MakeSlice(v.Type(), size, size))
 	for i := 0; i < size; i++ {
 		elemV := newValueForType(v.Type().Elem())
 		if i < node.Size() {
@@ -124,7 +110,6 @@ func (arrDec *arrayDecoder) decode(node RMNode, data interface{}, v reflect.Valu
 		} else {
 			arrDec.elemFunc(node, values[i], elemV)
 		}
-		fmt.Printf("\t array decode[%v] set value[%v] for index[%d] of array[%v] \n", v.Type(), elemV, i, v)
 		v.Index(i).Set(elemV)
 	}
 }
@@ -149,30 +134,19 @@ func (mapDec *mapDecoder) decode(node RMNode, data interface{}, v reflect.Value)
 	if err != nil {
 		panic(err)
 	}
-
-	//newV := reflect.MakeMap(v.Type())
-	//v.Set(newV)
-	if v.IsNil() && v.CanSet() {
-		v.Set(reflect.MakeMap(v.Type()))
-	}
+	v.Set(reflect.MakeMap(v.Type()))
 
 	for i := 0; i < size; i++ {
 		mKey, err := redis.String(values[i*2], nil)
 		if err != nil {
 			panic(err)
 		}
-
 		elemV := newValueForType(v.Type().Elem())
-
-		fmt.Printf("map decode init elem value : %v \n", elemV)
-
 		if i < node.Size() {
 			mapDec.elemFunc(node.Child(i), vals[i*2+1], elemV)
 		} else {
 			mapDec.elemFunc(node, vals[i*2+1], elemV)
 		}
-
-		fmt.Printf("%v \t isNil:%v \n", v.Type(), v.IsNil())
 		v.SetMapIndex(reflect.ValueOf(mKey), elemV)
 	}
 }
@@ -196,12 +170,8 @@ func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Val
 		panic(err)
 	}
 	size := len(values) / 2
-
-	fmt.Printf("struct decode : %v \n", v)
 	for i := 0; i < size; i++ {
 		fldVal := srtDec.spec.Fields[i].ValueOf(v)
-
-		fmt.Printf("\t field[%v : \t %v]\n", v, fldVal)
 		if i < node.Size() {
 			srtDec.elemFuncs[i](node.Child(i), values[i*2+1], fldVal)
 		} else {

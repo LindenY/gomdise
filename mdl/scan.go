@@ -3,7 +3,6 @@ package mdl
 import (
 	"reflect"
 	"sync"
-	"fmt"
 )
 
 type FieldSpec struct {
@@ -16,10 +15,6 @@ type FieldSpec struct {
 func (fldSpec *FieldSpec) ValueOf(v reflect.Value) reflect.Value {
 	retVal := v
 	for _, fldIdx := range fldSpec.Index {
-		fmt.Printf("[%d]\t %v \t %v \n", fldIdx, fldSpec.Typ, v)
-		fmt.Printf("\t\t %v \n", v.Type())
-		fmt.Printf("\t\t %v \n", retVal)
-
 		retVal = retVal.Field(fldIdx)
 	}
 	return retVal
