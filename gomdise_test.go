@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 	"strings"
+	"log"
+	"io/ioutil"
 )
 
 /*
@@ -144,6 +146,9 @@ func TestFindTsB(t *testing.T) {
 }
 
 func TestFindTsC(t *testing.T) {
+	log.SetFlags(0)
+	log.SetOutput(ioutil.Discard)
+
 	orig_tsC := MakeTsC()
 	dest_tsC := &tsC{}
 
