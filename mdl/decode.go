@@ -219,8 +219,6 @@ type modelDecoder struct {
 }
 
 func (mdlDec *modelDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
-
-	fmt.Printf("decode data: %v \n", data)
 	key, err := redis.String(data, nil)
 	if err != nil {
 		panic(err)

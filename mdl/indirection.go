@@ -11,13 +11,7 @@ var (
 )
 
 func NewKey(val reflect.Value) string {
-
-	fmt.Printf("%v implements model: %v \n", val, IfImplementsModel(val.Type()))
-
 	if IfImplementsModel(val.Type()) && val.CanAddr() {
-
-		fmt.Printf("%v implements model \n", val)
-
 		return ValueGetModelId(val)
 	}
 

@@ -1,6 +1,8 @@
 package mdl
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type Model interface {
 	GetModelId() string
@@ -26,7 +28,12 @@ func IfImplementsModel(t reflect.Type) bool {
 }
 
 func ValueGetModelId(v reflect.Value) string {
-	va := v.Addr()
+	var va reflect.Value
+	if v.Kind() != reflect.Ptr {
+		va = v.Addr()
+	} else {
+		va = v
+	}
 	if va.IsNil() {
 		return ""
 	}
@@ -35,7 +42,12 @@ func ValueGetModelId(v reflect.Value) string {
 }
 
 func ValueSetModelId(v reflect.Value, key string) {
-	va := v.Addr()
+	var va reflect.Value
+	if v.Kind() != reflect.Ptr {
+		va = v.Addr()
+	} else {
+		va = v
+	}
 	if va.IsNil() {
 		return
 	}

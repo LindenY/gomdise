@@ -6,9 +6,6 @@ import (
 	"testing"
 	"time"
 	"strings"
-	"fmt"
-	"github.com/LindenY/gomdise/mdl"
-	"reflect"
 )
 
 /*
@@ -122,14 +119,19 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestSave(t *testing.T) {
+func TestSaveTsB(t *testing.T) {
 	tsB := MakeTsB()
-
 	gom := New(pool)
 	gom.Save(tsB)
 }
 
-func TestFind(t *testing.T) {
+func TestSaveTsC(t *testing.T) {
+	tsC := MakeTsC()
+	gom := New(pool)
+	gom.Save(tsC)
+}
+
+func TestFindTsB(t *testing.T) {
 	orig_tsB := MakeTsB()
 	dest_tsB := &tsB{}
 
@@ -139,7 +141,16 @@ func TestFind(t *testing.T) {
 		panic(err)
 	}
 	gom.Find(key, dest_tsB)
+}
 
-	fmt.Printf("%v \n", mdl.IfImplementsModel(reflect.TypeOf(MakeTsA())))
-	fmt.Printf("%v \n", dest_tsB)
+func TestFindTsC(t *testing.T) {
+	orig_tsC := MakeTsC()
+	dest_tsC := &tsC{}
+
+	gom := New(pool)
+	key, err := gom.Save(orig_tsC)
+	if err != nil {
+		panic(err)
+	}
+	gom.Find(key, dest_tsC)
 }
