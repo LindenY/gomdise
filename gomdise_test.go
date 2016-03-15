@@ -133,6 +133,14 @@ func TestSaveTsC(t *testing.T) {
 	gom.Save(tsC)
 }
 
+func TestSaveWithKeyForMapWithInterfaceValue(t *testing.T) {
+	m := make(map[string]interface{})
+	m["str"] = "key0"
+	m["srt"] = MakeTsA()
+	gom := New(pool)
+	gom.SaveWithKey(m, "TestSaveWithKeyForMapWithInterfaceValue")
+}
+
 func TestFindTsB(t *testing.T) {
 	orig_tsB := MakeTsB()
 	dest_tsB := &tsB{}

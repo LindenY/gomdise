@@ -9,11 +9,16 @@ import (
 	"github.com/LindenY/gomdise/trans"
 )
 
-var TCSave *TemplateCache
+var (
+	TCSave *TemplateCache
+ 	_prtst *primitiveSaveTemplate
+	_infst *interfaceSaveTemplate
+)
 
 func init() {
 	TCSave = newTplCache(newSaveTemplateForType)
 	_prtst = &primitiveSaveTemplate{}
+	_infst = &interfaceSaveTemplate{}
 }
 
 func newSaveTemplateForType(t reflect.Type) ActionTemplate {
@@ -22,6 +27,8 @@ func newSaveTemplateForType(t reflect.Type) ActionTemplate {
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return _prtst
+	case reflect.Interface:
+		return _infst
 	case reflect.Array, reflect.Slice:
 		return newArraySaveTemplate(t)
 	case reflect.Map:
@@ -151,12 +158,12 @@ func newStructSaveTemplate(t reflect.Type) *structSaveTemplate {
  *
  */
 type pointerSaveTemplate struct {
-	elemFunc ActionTemplate
+	elemTpl ActionTemplate
 }
 
 func (pst *pointerSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	v := args[1].(reflect.Value)
-	pst.elemFunc.Engrave(actions, args[0], v.Elem())
+	pst.elemTpl.Engrave(actions, args[0], v.Elem())
 }
 
 func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {
@@ -167,9 +174,21 @@ func newPointerSaveTemplate(t reflect.Type) *pointerSaveTemplate {
 /*
  *
  */
-type primitiveSaveTemplate struct{}
+type interfaceSaveTemplate struct {}
 
-var _prtst *primitiveSaveTemplate
+func (ist *interfaceSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
+	v := args[1].(reflect.Value)
+	tpl := TCSave.GetTemplate(v.Elem().Type())
+
+	fmt.Printf("InterfaceSaveTemplate.Engrave: %v \t %v \n", v.Elem().Type(), v)
+	fmt.Printf(" \t Resolved tpl: %v \n", reflect.ValueOf(tpl).Elem().Type())
+	tpl.Engrave(actions, args...)
+}
+
+/*
+ *
+ */
+type primitiveSaveTemplate struct{}
 
 func (pst *primitiveSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := (*actions)[len(*actions)-1]
