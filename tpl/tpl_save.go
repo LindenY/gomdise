@@ -178,11 +178,9 @@ type interfaceSaveTemplate struct {}
 
 func (ist *interfaceSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	v := args[1].(reflect.Value)
-	tpl := TCSave.GetTemplate(v.Elem().Type())
-
-	fmt.Printf("InterfaceSaveTemplate.Engrave: %v \t %v \n", v.Elem().Type(), v)
-	fmt.Printf(" \t Resolved tpl: %v \n", reflect.ValueOf(tpl).Elem().Type())
-	tpl.Engrave(actions, args...)
+	v = v.Elem()
+	tpl := TCSave.GetTemplate(v.Type())
+	tpl.Engrave(actions, args[0], v)
 }
 
 /*
