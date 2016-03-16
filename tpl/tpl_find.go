@@ -7,10 +7,14 @@ import (
 	"github.com/LindenY/gomdise/mdl"
 )
 
-var TCFind *TemplateCache
+var (
+	TCFind *TemplateCache
+	_vft *voidFindTemplate
+)
 
 func init() {
 	TCFind = newTplCache(newFindTemplateForType)
+	_vft = &voidFindTemplate{}
 }
 
 
@@ -19,7 +23,7 @@ func newFindTemplateForType(t reflect.Type) ActionTemplate {
 	case reflect.Bool, reflect.String, reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return newVoidFindTemplate(t)
+		return _vft
 	case reflect.Array, reflect.Slice:
 		return newArrayFindTemplate(t)
 	case reflect.Map:
@@ -196,20 +200,6 @@ func newPointerFindTemplate(t reflect.Type) ActionTemplate {
 	return pft
 }
 
-type voidFindTemplate struct {
-}
+type voidFindTemplate struct {}
 
-func (vft *voidFindTemplate) handle(tran *trans.Transaction, action *trans.Action, reply interface{}) {
-}
-
-func (vft *voidFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
-}
-
-var _vft *voidFindTemplate
-
-func newVoidFindTemplate(t reflect.Type) *voidFindTemplate {
-	if _vft == nil {
-		_vft = &voidFindTemplate{}
-	}
-	return _vft
-}
+func (vft *voidFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {}

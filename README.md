@@ -25,6 +25,7 @@ To find data, invoke the method of gomdise instance ([example](https://github.co
 gomdise.Find(key string, arg interface{})
 ```
 1. The arg parameter should be an pointer value, more actually, an addressable and settable parameter
+2. The interface{} type is currently not supported for find operation
 
 
 ### Sample usage
