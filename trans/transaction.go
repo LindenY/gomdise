@@ -3,6 +3,8 @@ package trans
 import (
 	"github.com/garyburd/redigo/redis"
 	"log"
+	"errors"
+	"fmt"
 )
 
 type Transaction struct {
@@ -33,12 +35,26 @@ func (tran *Transaction) popAction() *Action {
 
 func (tran *Transaction) sendAction(action *Action) error {
 	log.Printf("Transaction: sending action %v \n", action)
-	return tran.conn.Send(action.Name, action.Args...)
+	switch action.Type {
+	case CmdAction:
+		return tran.conn.Send(action.Name, action.Args...)
+	case ScriptAction:
+		return action.Script.Send(tran.conn, action.Args...)
+	default:
+		return errors.New(fmt.Sprintf("Unsupported Action Type %v", action.Type))
+	}
 }
 
 func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	log.Printf("Transaction: doing action %v \n", action)
-	return tran.conn.Do(action.Name, action.Args...)
+	switch action.Type {
+	case CmdAction:
+		return tran.conn.Do(action.Name, action.Args...)
+	case ScriptAction:
+		return action.Script.Do(tran.conn, action.Args...)
+	default:
+		return errors.New(fmt.Sprintf("Unsupported Action Type %v", action.Type))
+	}
 }
 
 func (tran *Transaction) exec() {

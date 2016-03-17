@@ -5,6 +5,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/LindenY/gomdise/trans"
 	"github.com/LindenY/gomdise/mdl"
+	"github.com/LindenY/gomdise/lscp"
 )
 
 var (
@@ -32,6 +33,8 @@ func newFindTemplateForType(t reflect.Type) ActionTemplate {
 		return newStructFindTemplate(t)
 	case reflect.Ptr:
 		return newPointerFindTemplate(t)
+	case reflect.Interface:
+		return &interfaceFindTemplate{}
 	default:
 		return newUnsupportedTypeTemplate(t, "Find")
 	}
@@ -198,6 +201,25 @@ func (pft *pointerFindTemplate) Engrave(actions *[]*trans.Action, args ...interf
 func newPointerFindTemplate(t reflect.Type) ActionTemplate {
 	pft := &pointerFindTemplate{TCFind.GetTemplate(t.Elem())}
 	return pft
+}
+
+type interfaceFindTemplate struct {}
+
+func (ift *interfaceFindTemplate) handle(tran *trans.Transaction, action *trans.Action, reply interface{}) {
+	replies, _ := redis.Values(reply, nil)
+	dataType, _ := redis.String(replies[0], nil)
+	switch dataType {
+	case "hash":
+	}
+}
+
+func (ift *interfaceFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
+	action := &trans.Action{
+		Type: trans.ScriptAction,
+		Script:lscp.LSGetByType,
+		Args:redis.Args{args[0]},
+	}
+	*actions = append(*actions, action)
 }
 
 type voidFindTemplate struct {}

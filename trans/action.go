@@ -5,9 +5,19 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+type ActionType int
+
+const (
+	CmdAction ActionType = iota
+	ScriptAction
+)
+
 type Action struct {
 	Name     string
+	Script   *redis.Script
+	Type	 ActionType
 	Args     redis.Args
+
 	Reply    interface{}
 	Handler  ReplyHandler
 
