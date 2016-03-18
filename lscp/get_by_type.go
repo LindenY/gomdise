@@ -1,8 +1,7 @@
 package lscp
 
-var LSGetByType Script = NewScript(
-	1,
-	`local key = KEYS[1]
+var LSGetByType *Script = NewScript(1, `
+	local key = KEYS[1]
 	local type = redis.call("TYPE", key)["ok"]
 	local ret
 	if type == "string" then
@@ -17,4 +16,5 @@ var LSGetByType Script = NewScript(
 	if type == "set" then
 		ret = redis.call("SMEMBERS", key)
 	end
-	return {type, ret}`)
+	return {type, ret}
+`)

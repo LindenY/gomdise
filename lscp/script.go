@@ -15,12 +15,12 @@ func NewScript(keyCount int, src string) *Script {
 	return lscp
 }
 
-func (scp *Script) Send(c redis.Conn, args ...interface{}) {
+func (scp *Script) Send(c redis.Conn, args ...interface{}) error {
 	if scp.loaded {
-		scp.rscp.SendHash(c, args...)
+		return scp.rscp.SendHash(c, args...)
 	} else {
 		scp.loaded = true
-		scp.rscp.Send(c, args...)
+		return scp.rscp.Send(c, args...)
 	}
 }
 

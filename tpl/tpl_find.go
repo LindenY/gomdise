@@ -214,10 +214,19 @@ func (ift *interfaceFindTemplate) handle(tran *trans.Transaction, action *trans.
 }
 
 func (ift *interfaceFindTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
+	key, ok := args[0].(string)
+	if !ok {
+		_, err := redis.Scan(args, &key)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	action := &trans.Action{
+		Name:"GetByType",
 		Type: trans.ScriptAction,
 		Script:lscp.LSGetByType,
-		Args:redis.Args{args[0]},
+		Args:redis.Args{key},
 	}
 	*actions = append(*actions, action)
 }

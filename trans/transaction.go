@@ -53,7 +53,7 @@ func (tran *Transaction) doAction(action *Action) (interface{}, error) {
 	case ScriptAction:
 		return action.Script.Do(tran.conn, action.Args...)
 	default:
-		return errors.New(fmt.Sprintf("Unsupported Action Type %v", action.Type))
+		return nil, errors.New(fmt.Sprintf("Unsupported Action Type %v", action.Type))
 	}
 }
 

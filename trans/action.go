@@ -3,6 +3,7 @@ package trans
 import (
 	"fmt"
 	"github.com/garyburd/redigo/redis"
+	"github.com/LindenY/gomdise/lscp"
 )
 
 type ActionType int
@@ -14,7 +15,7 @@ const (
 
 type Action struct {
 	Name     string
-	Script   *redis.Script
+	Script   *lscp.Script
 	Type	 ActionType
 	Args     redis.Args
 
@@ -69,5 +70,6 @@ func (action *Action) Value() interface{} {
 }
 
 func (action *Action) String() string {
-	return fmt.Sprintf("%s\t%v", action.Name, action.Args)
+
+	return fmt.Sprintf("[%s:%v]\t%v", action.Name, action.Type, action.Args)
 }

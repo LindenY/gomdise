@@ -180,6 +180,8 @@ func (ist *interfaceSaveTemplate) Engrave(actions *[]*trans.Action, args ...inte
 	v := args[1].(reflect.Value)
 	v = v.Elem()
 	tpl := TCSave.GetTemplate(v.Type())
+
+	fmt.Printf("interface.Engrave: %v \n", reflect.ValueOf(tpl).Elem().Type())
 	tpl.Engrave(actions, args[0], v)
 }
 
