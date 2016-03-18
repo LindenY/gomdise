@@ -1,9 +1,4 @@
-
-local function getTypeOfKey(key) 
-	return {key, redis.call("TYPE", key)["ok"]}
-end
-
-local queue = {getTypeOfKey(KEYS[1])}
+local queue = { {KEYS[1], redis.call("TYPE", KEYS[1])["ok"]} }
 local visited = {}
 local result = {}
 
