@@ -9,15 +9,15 @@ import (
 	"sync"
 )
 
-type RMNode trans.RMNode
+type snode trans.RMNode
 
-func Decode(node RMNode, dest interface{}) {
+func Decode(node snode, dest interface{}) {
 	v := reflect.ValueOf(dest)
 	decFunc := decoderForType(v.Type())
 	decFunc(node, node.Value(), v)
 }
 
-type decodeFunc func(node RMNode, data interface{}, v reflect.Value)
+type decodeFunc func(node snode, data interface{}, v reflect.Value)
 
 var decoderCache struct {
 	sync.RWMutex
@@ -38,7 +38,7 @@ func decoderForType(t reflect.Type) decodeFunc {
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	decoderCache.m[t] = func(node RMNode, data interface{}, v reflect.Value) {
+	decoderCache.m[t] = func(node snode, data interface{}, v reflect.Value) {
 		wg.Wait()
 		f(node, data, v)
 	}
@@ -54,7 +54,7 @@ func decoderForType(t reflect.Type) decodeFunc {
 
 func newValueForType(t reflect.Type) reflect.Value {
 	switch t.Kind() {
-	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Interface:
 		return reflect.New(t).Elem()
 	case reflect.Ptr:
 		return reflect.New(t.Elem())
@@ -82,6 +82,8 @@ func newTypeDecoder(t reflect.Type) decodeFunc {
 		decoder = newStructDecoder(t)
 	case reflect.Ptr:
 		decoder = newPointerDecoder(t)
+	case reflect.Interface:
+		decoder = interfaceDecoder
 	default:
 		return unsupportedTypeDecoder
 	}
@@ -96,7 +98,7 @@ type arrayDecoder struct {
 	elemFunc decodeFunc
 }
 
-func (arrDec *arrayDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+func (arrDec *arrayDecoder) decode(node snode, data interface{}, v reflect.Value) {
 	values, err := redis.Values(node.Value(), nil)
 	if err != nil {
 		panic(err)
@@ -121,38 +123,38 @@ func newArrayDecoder(t reflect.Type) decodeFunc {
 
 type mapDecoder struct {
 	elemFunc decodeFunc
+	elemType reflect.Type
 }
 
-func (mapDec *mapDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
-	values, err := redis.Values(node.Value(), nil)
-	if err != nil {
-		panic(err)
-	}
+func (mapDec *mapDecoder) decode(node snode, data interface{}, v reflect.Value) {
+	values := node.Value().([]interface{})
 
-	size := len(values) / 2
-	vals, err := redis.Values(node.Value(), nil)
-	if err != nil {
-		panic(err)
-	}
-	v.Set(reflect.MakeMap(v.Type()))
+	mapArr := values[2].([]interface{})
+	mapV := reflect.MakeMap(mapDec.elemType)
+	size := len(values[2].([]interface{})) / 2
+	cldIdx := 0
 
 	for i := 0; i < size; i++ {
-		mKey, err := redis.String(values[i*2], nil)
-		if err != nil {
-			panic(err)
+		mKey := mapArr[i*2].(string)
+		elemV := newValueForType(mapDec.elemType.Elem())
+
+		switch mapArr[i*2+1].([]interface{})[1] {
+		case "none":
+			mapDec.elemFunc(nil, mapArr[i*2+1], elemV)
+		default:
+			mapDec.elemFunc(node.Child(cldIdx), mapArr[i*2+1], elemV)
+			cldIdx ++
 		}
-		elemV := newValueForType(v.Type().Elem())
-		if i < node.Size() {
-			mapDec.elemFunc(node.Child(i), vals[i*2+1], elemV)
-		} else {
-			mapDec.elemFunc(node, vals[i*2+1], elemV)
-		}
-		v.SetMapIndex(reflect.ValueOf(mKey), elemV)
+		mapV.SetMapIndex(reflect.ValueOf(mKey), elemV)
 	}
+	v.Set(mapV)
 }
 
 func newMapDecoder(t reflect.Type) decodeFunc {
-	mapDec := &mapDecoder{decoderForType(t.Elem())}
+	mapDec := &mapDecoder{
+		elemFunc: decoderForType(t.Elem()),
+		elemType: t,
+	}
 	return mapDec.decode
 }
 
@@ -164,7 +166,7 @@ type structDecoder struct {
 /*
  * TODO: using key name match instead of matching fields by reply order
  */
-func (srtDec *structDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+func (srtDec *structDecoder) decode(node snode, data interface{}, v reflect.Value) {
 	values, err := redis.Values(node.Value(), nil)
 	if err != nil {
 		panic(err)
@@ -197,7 +199,7 @@ type pointerDecoder struct {
 	elemFunc decodeFunc
 }
 
-func (ptrDec *pointerDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+func (ptrDec *pointerDecoder) decode(node snode, data interface{}, v reflect.Value) {
 	ptrDec.elemFunc(node, data, v.Elem())
 }
 
@@ -210,7 +212,7 @@ type modelDecoder struct {
 	elemFunc decodeFunc
 }
 
-func (mdlDec *modelDecoder) decode(node RMNode, data interface{}, v reflect.Value) {
+func (mdlDec *modelDecoder) decode(node snode, data interface{}, v reflect.Value) {
 	key, err := redis.String(data, nil)
 	if err != nil {
 		panic(err)
@@ -225,7 +227,27 @@ func newModelDecoder(dec decodeFunc) decodeFunc {
 	return mdlDec.decode
 }
 
-func booleanDecoder(node RMNode, data interface{}, v reflect.Value) {
+func interfaceDecoder(node snode, data interface{}, v reflect.Value) {
+	nVal := data.([]interface{})
+
+	fmt.Printf("interfaceDec data : %v \n", data)
+
+	switch nVal[1] {
+	case "hash":
+		fmt.Printf("map type: %v \n", reflect.TypeOf(new(map[string]interface{})).Elem())
+		mapDec := newMapDecoder(reflect.TypeOf(new(map[string]interface{})).Elem())
+		mapDec(node, data, v)
+
+	case "list", "set", "zset":
+		arrDec := newArrayDecoder(reflect.TypeOf(new(interface{})).Elem())
+		arrDec(node, data, v)
+
+	case "none":
+		stringDecoder(node, data, v)
+	}
+}
+
+func booleanDecoder(node snode, data interface{}, v reflect.Value) {
 	val, err := redis.Bool(data, nil)
 	if err != nil {
 		panic(err)
@@ -233,15 +255,17 @@ func booleanDecoder(node RMNode, data interface{}, v reflect.Value) {
 	v.SetBool(val)
 }
 
-func stringDecoder(node RMNode, data interface{}, v reflect.Value) {
-	val, err := redis.String(data, nil)
-	if err != nil {
-		panic(err)
+func stringDecoder(node snode, data interface{}, v reflect.Value) {
+	switch v.Kind() {
+	case reflect.String:
+		v.SetString(data.([]interface{})[0].(string))
+	default:
+		v.Set(reflect.ValueOf(data.([]interface{})[0]))
 	}
-	v.SetString(val)
+
 }
 
-func numberDecoder(node RMNode, data interface{}, v reflect.Value) {
+func numberDecoder(node snode, data interface{}, v reflect.Value) {
 	val, err := redis.String(data, nil)
 	if err != nil {
 		panic(err)
@@ -274,6 +298,6 @@ func numberDecoder(node RMNode, data interface{}, v reflect.Value) {
 	}
 }
 
-func unsupportedTypeDecoder(node RMNode, data interface{}, v reflect.Value) {
+func unsupportedTypeDecoder(node snode, data interface{}, v reflect.Value) {
 	panic(fmt.Sprintf("Unsupported decoding for type[%v] with value[%v]", v.Type(), data))
 }

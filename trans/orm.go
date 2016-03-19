@@ -5,9 +5,11 @@ type RMNode interface {
 
 	Parent() RMNode
 
+	SetParent(parent RMNode)
+
 	Child(index int) RMNode
 
-	Children(start int, end int) []RMNode
+	AddChildren(children ...RMNode)
 
 	Size() int
 

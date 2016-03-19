@@ -8,6 +8,7 @@ import (
 	"strings"
 	"log"
 	"io/ioutil"
+	"fmt"
 )
 
 /*
@@ -99,7 +100,7 @@ func TestMain(m *testing.M) {
 		MaxIdle:     1,
 		IdleTimeout: 3 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			conn, err := redis.Dial("tcp", "184.107.247.74:16379")
+			conn, err := redis.Dial("tcp", "127.0.0.1:6379")
 			if err != nil {
 				return nil, err
 			}
@@ -175,5 +176,7 @@ func TestFindWithKeyForMapWithInterfaceValue(t *testing.T) {
 	gom := New(pool)
 	gom.SaveWithKey(m, "TestSaveWithKeyForMapWithInterfaceValue")
 
-	gom.Find("TestSaveWithKeyForMapWithInterfaceValue", make(map[string]interface{}))
+	dest := make(map[string]interface{})
+	gom.Find("TestSaveWithKeyForMapWithInterfaceValue", &dest)
+	fmt.Printf("%v \n", dest)
 }

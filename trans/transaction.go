@@ -1,15 +1,16 @@
 package trans
 
 import (
-	"github.com/garyburd/redigo/redis"
-	"log"
 	"errors"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
+	"log"
 )
 
 type Transaction struct {
 	conn    redis.Conn
 	Actions []*Action
+	State   interface{}
 }
 
 func NewTransaction(pool *redis.Pool) *Transaction {
@@ -104,11 +105,12 @@ func (tran *Transaction) handle(reply interface{}) {
 	}
 }
 
-func (tran *Transaction) Exec() {
+func (tran *Transaction) Exec() interface{} {
 	defer tran.conn.Close()
 	for len(tran.Actions) > 0 {
 		log.Printf("Transaction: >>>\t executing transaction with %d actions \n", len(tran.Actions))
 		tran.exec()
 		log.Printf("Transaction: >>>\t executed transaction")
 	}
+	return tran.State
 }

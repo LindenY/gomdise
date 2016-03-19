@@ -64,11 +64,9 @@ func (gom *Gomdise) Find(key string, dest interface{}) (err error) {
 		err = errorRecover()
 	}()
 
-	tpl := tpl.TCFind.GetTemplate(reflect.TypeOf(dest))
 	tran := trans.NewTransaction(gom.pool)
-	tpl.Engrave(&tran.Actions, key)
-	root := tran.Actions[0]
-	tran.Exec()
+	tpl.FindTemplate.Engrave(&tran.Actions, key)
+	root := tran.Exec().(trans.RMNode)
 	mdl.Decode(root, dest)
 	return nil
 }

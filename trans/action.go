@@ -22,8 +22,8 @@ type Action struct {
 	Reply    interface{}
 	Handler  ReplyHandler
 
-	parent   *Action
-	children []*Action
+	parent   RMNode
+	children []RMNode
 }
 
 type ReplyHandler func(tran *Transaction, action *Action, reply interface{})
@@ -34,18 +34,22 @@ func (action *Action) handle(trans *Transaction, reply interface{}) {
 	}
 }
 
-func (action *Action) AddChildren(children ...*Action) {
+func (action *Action) AddChildren(children ...RMNode) {
 	if children == nil {
 		return
 	}
 	for _, child := range children {
 		action.children = append(action.children, child)
-		child.parent = action
+		child.SetParent(action)
 	}
 }
 
 func (action *Action) Parent() RMNode {
 	return action.parent
+}
+
+func (action *Action) SetParent(parent RMNode) {
+	action.parent = parent
 }
 
 func (action *Action) Child(index int) RMNode {
@@ -70,6 +74,5 @@ func (action *Action) Value() interface{} {
 }
 
 func (action *Action) String() string {
-
 	return fmt.Sprintf("[%s:%v]\t%v", action.Name, action.Type, action.Args)
 }
