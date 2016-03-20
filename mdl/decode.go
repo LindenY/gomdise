@@ -99,21 +99,26 @@ type arrayDecoder struct {
 }
 
 func (arrDec *arrayDecoder) decode(node snode, data interface{}, v reflect.Value) {
-	values, err := redis.Values(node.Value(), nil)
-	if err != nil {
-		panic(err)
-	}
+	values := node.Value().([]interface{})
+
 	size := len(values)
-	v.Set(reflect.MakeSlice(v.Type(), size, size))
+	arrV := reflect.MakeSlice(v.Type(), size, size)
+	listArr := values[2].([]interface{})
+	cldIdx := 0
+
+	fmt.Printf("listArr: %v \n", listArr)
 	for i := 0; i < size; i++ {
 		elemV := newValueForType(v.Type().Elem())
-		if i < node.Size() {
-			arrDec.elemFunc(node.Child(i), values[i], elemV)
+
+		if listArr[i].([]interface{})[1] == "none" {
+			arrDec.elemFunc(nil, listArr[i], elemV)
 		} else {
-			arrDec.elemFunc(node, values[i], elemV)
+			arrDec.elemFunc(node.Child(cldIdx), listArr[i], elemV)
+			cldIdx ++
 		}
-		v.Index(i).Set(elemV)
+		arrV.Index(i).Set(elemV)
 	}
+	v.Set(arrV)
 }
 
 func newArrayDecoder(t reflect.Type) decodeFunc {
@@ -234,7 +239,6 @@ func interfaceDecoder(node snode, data interface{}, v reflect.Value) {
 
 	switch nVal[1] {
 	case "hash":
-		fmt.Printf("map type: %v \n", reflect.TypeOf(new(map[string]interface{})).Elem())
 		mapDec := newMapDecoder(reflect.TypeOf(new(map[string]interface{})).Elem())
 		mapDec(node, data, v)
 

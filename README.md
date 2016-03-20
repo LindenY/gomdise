@@ -17,7 +17,7 @@ gomdise.Save(arg interface{})
 ```
 1. Any exported fields of a struct will be saved by gomdise.
 2. To use the customized redis key for the data argument, implement [mdl.Model](https://github.com/LindenY/gomdise/blob/v0.0.1-SNAPSHOT/mdl/model.go#L3) interface
-
+3. Save can not work with interface type as well
 
 ### Find data
 To find data, invoke the method of gomdise instance ([example](https://github.com/LindenY/gomdise/blob/v0.0.1-SNAPSHOT/gomdise_test.go#L115))

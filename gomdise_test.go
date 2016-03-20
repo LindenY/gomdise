@@ -180,3 +180,19 @@ func TestFindWithKeyForMapWithInterfaceValue(t *testing.T) {
 	gom.Find("TestSaveWithKeyForMapWithInterfaceValue", &dest)
 	fmt.Printf("%v \n", dest)
 }
+
+func TestFindWithKeyForArrayWithInterfaceElement(t *testing.T) {
+	m := make(map[string]interface{})
+	m["str"] = "key0"
+	m["srt"] = MakeTsA()
+	arr := make([]interface{}, 3)
+	arr[0] = m
+	arr[1] = 3
+	arr[2] = MakeTsA()
+	gom := New(pool)
+	gom.SaveWithKey(arr, "TestFindWithKeyForArrayWithInterfaceElement")
+
+	dest := make([]interface{}, 0)
+	gom.Find("TestFindWithKeyForArrayWithInterfaceElement", &dest)
+	fmt.Printf("%v \n", dest)
+}

@@ -21,6 +21,15 @@ func init() {
 	_infst = &interfaceSaveTemplate{}
 }
 
+/*
+ * TODO: save template can not work with interface type
+ *  For innstance, when save []interface{} type, then
+ *  the underlying data type is mixed with primitive
+ *  types and others, the template with not work. Since
+ *  the primitive template will add its value to last
+ *  action, but the last action might not be the action
+ *  of the []interface type itself, but of others data type.
+ */
 func newSaveTemplateForType(t reflect.Type) ActionTemplate {
 	switch t.Kind() {
 	case reflect.Bool, reflect.String, reflect.Float32, reflect.Float64,
@@ -181,7 +190,8 @@ func (ist *interfaceSaveTemplate) Engrave(actions *[]*trans.Action, args ...inte
 	v = v.Elem()
 	tpl := TCSave.GetTemplate(v.Type())
 
-	fmt.Printf("interface.Engrave: %v \n", reflect.ValueOf(tpl).Elem().Type())
+	fmt.Printf("interface.Engrave: [args: %v] \n", args)
+	fmt.Printf("interface.Engrave: [%v] %v \n", reflect.ValueOf(tpl).Elem().Type(), v)
 	tpl.Engrave(actions, args[0], v)
 }
 
@@ -192,7 +202,11 @@ type primitiveSaveTemplate struct{}
 
 func (pst *primitiveSaveTemplate) Engrave(actions *[]*trans.Action, args ...interface{}) {
 	action := (*actions)[len(*actions)-1]
+	fmt.Printf("primitiveTemplate.engrave: [args %d: %v] \n", len(args), args)
+	fmt.Printf("primitiveTemplate.engrave: %v \n", args[1].(reflect.Value).Interface())
+	fmt.Printf("action.args = %d : ", len(action.Args))
 	action.Args = action.Args.Add(args[1].(reflect.Value).Interface())
+	fmt.Printf("%d \n", len(action.Args))
 }
 
 func numbericReplyValidator(action *trans.Action, ept int, reply interface{}) {
